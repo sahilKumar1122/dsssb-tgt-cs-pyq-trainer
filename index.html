@@ -100,6 +100,17 @@ h2{margin:0 0 4px;font-size:22px}
 .tg input:checked+i{background:var(--ok)}.tg input:checked+i:after{left:16px}
 .tg:has(input:checked){border-color:var(--ok);background:var(--okbg)}
 .tg.dis{opacity:.45;pointer-events:none}
+.q.pyq{border-left:4px solid var(--acc)}.q.prac{border-left:4px solid #0d9488}
+.bdg{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;margin-right:6px}
+.bdg.pyq{background:var(--acc2);color:var(--acc)}.bdg.prac{background:#ccfbf1;color:#0f766e}
+.sec{display:flex;align-items:center;gap:10px;margin:22px 0 10px;padding:10px 14px;border-radius:12px;font-weight:700}
+.sec small{font-weight:500;opacity:.8}.sec.pyq{background:var(--acc2);color:var(--acc)}.sec.prac{background:#ccfbf1;color:#0f766e}
+.sec .bar{flex:1;max-width:220px;margin-left:auto;background:rgba(255,255,255,.7)}
+.sg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.sg button{border:none;border-radius:0;padding:8px 14px;font-weight:600}.sg button+button{border-left:1px solid var(--line)}
+.sg button.on{background:var(--acc);color:#fff}.sg button.on.p{background:#0d9488}
+.sg button span{opacity:.75;font-weight:500;margin-left:5px}
+.sb2{display:flex;gap:4px;margin:0 10px 6px}.sb2 .bar{flex:1;height:4px}.sb2 .bar.t i{background:#0d9488}
 @media (max-width:820px){.app{grid-template-columns:1fr}aside{position:static;height:auto}}
 @media print{header,aside,.noprint{display:none}.app{display:block}.sol{display:block!important}.q{break-inside:avoid}}
 </style>
@@ -178,12 +189,13 @@ function header(){
 }
 
 function allQ(si){return SUBJ[si].topics.flatMap((t,ti)=>t.qs.map(q=>({q,ti,si,id:sid(si,q.n),topic:t.title})))}
-function listFor(){
+const isP=q=>q.src==='Practice';
+function listFor(srcOv){const SR=srcOv||SRC;
   let L;
   if(V.m==='topic'){L=V.t<0?allQ(cur):SUBJ[cur].topics[V.t].qs.map(q=>({q,ti:V.t,si:cur,id:sid(cur,q.n),topic:SUBJ[cur].topics[V.t].title}))}
   else{const base=SUBJ.flatMap((_,i)=>allQ(i));
     L=V.m==='bm'?base.filter(x=>S.bm[x.id]):V.m==='miss'?base.filter(x=>S.att[x.id]&&!S.att[x.id].ok):V.m==='new'?allQ(cur).filter(x=>!S.att[x.id]):(V.list||[])}
-  if(SRC==='pyq')L=L.filter(x=>x.q.src!=='Practice');else if(SRC==='prac')L=L.filter(x=>x.q.src==='Practice');
+  if(SR==='pyq')L=L.filter(x=>!isP(x.q));else if(SR==='prac')L=L.filter(x=>isP(x.q));
   const term=$('#search').value.trim().toLowerCase();
   if(term)L=L.filter(x=>(x.q.stem+Object.values(x.q.opts).join(' ')+x.q.sol).toLowerCase().includes(term));
   return L;
@@ -198,8 +210,9 @@ function sidebar(){
   h+=`<div class="item ${V.m==='topic'&&V.t<0?'on':''}" onclick="go({m:'topic',t:-1})"><span>All topics</span><span class="c">${allQ(cur).filter(x=>S.att[x.id]).length}/${allQ(cur).length}</span></div>`;
   sj.topics.forEach((t,i)=>{
     if(t.unit!==last){h+=`<div class="unit">${esc(t.unit)}</div>`;last=t.unit}
-    const d=t.qs.filter(q=>S.att[sid(cur,q.n)]).length,p=t.qs.length?Math.round(d/t.qs.length*100):0;
-    h+=`<div class="item ${V.m==='topic'&&V.t===i?'on':''}" onclick="go({m:'topic',t:${i}})"><span>${prBadge(cur,t.title)}${esc(t.title)}</span><span class="c">${d}/${t.qs.length}</span></div><div class="bar mini ok"><i style="width:${p}%"></i></div>`;
+    const A=t.qs.filter(q=>!isP(q)),B=t.qs.filter(isP);const dA=A.filter(q=>S.att[sid(cur,q.n)]).length,dB=B.filter(q=>S.att[sid(cur,q.n)]).length;
+    const pA=A.length?dA/A.length*100:0,pB=B.length?dB/B.length*100:0;
+    h+=`<div class="item ${V.m==='topic'&&V.t===i?'on':''}" onclick="go({m:'topic',t:${i}})"><span>${prBadge(cur,t.title)}${esc(t.title)}</span><span class="c" title="PYQ done/total · Practice done/total">📄${dA}/${A.length} · ✍️${dB}/${B.length}</span></div><div class="sb2"><div class="bar ok"><i style="width:${pA}%"></i></div><div class="bar t"><i style="width:${pB}%"></i></div></div>`;
   });
   $('#topics').innerHTML=h;
 }
@@ -240,8 +253,8 @@ function qhtml(x){
   const opts=Object.keys(q.opts).map(k=>{let c='';if(a){if(k===q.ans)c='right';else if(k===a.k)c='wrong'}else if(rev&&k===q.ans)c='right'
     return `<div class="opt ${c}" onclick="pick('${x.id}','${k}')"><b>${k}</b><span>${esc(q.opts[k])}</span></div>`}).join('');
   const tbl=t?`<table class="tb"><thead><tr>${t.head.map(c=>`<th colspan="${t.rows[0].length/t.head.length}">${esc(c)}</th>`).join('')}</tr></thead><tbody>${t.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`:'';
-  return `<div class="q ${a?'done show':''}${rev?' rev show':''}${BRIEF?' brief':''}" id="q_${x.id}">
-   <div class="qh"><span>${esc(SUBJ[x.si].subject)} · Q${q.n} · ${esc(q.src||('DSSSB '+q.yr))}</span><button class="star ${S.bm[x.id]?'on':''}" title="Bookmark" onclick="bm('${x.id}')">★</button></div>
+  return `<div class="q ${isP(q)?'prac':'pyq'} ${a?'done show':''}${rev?' rev show':''}${BRIEF?' brief':''}" id="q_${x.id}">
+   <div class="qh"><span>${isP(q)?'<span class="bdg prac">✍️ PRACTICE</span>':`<span class="bdg pyq">📄 PYQ · ${esc(q.src||('DSSSB '+q.yr))}</span>`}${esc(SUBJ[x.si].subject)} · ${isP(q)?'P'+(q.n-10000):'Q'+q.n}</span><button class="star ${S.bm[x.id]?'on':''}" title="Bookmark" onclick="bm('${x.id}')">★</button></div>
    <div class="stem">${q.stem?esc(q.stem):'<span class="fig">Figure-based question (figure not captured)</span>'}</div>${tbl}
    ${q.note?`<div class="fig" style="margin-bottom:8px">${esc(q.note)}</div>`:''}
    ${opts}
@@ -266,24 +279,24 @@ function bm(id){if(S.bm[id])delete S.bm[id];else S.bm[id]=1;save();const x=findQ
   if(el){const o=el.classList.contains('show');el.outerHTML=qhtml(x);if(o)document.getElementById('q_'+id).classList.add('show')}sidebar();checkBadges();}
 
 function go(o){V=Object.assign({m:'dash',t:-1,focus:false,i:0,list:null},o);if(o.si!==undefined){cur=o.si}render();window.scrollTo(0,0)}
-function startPractice(n){const base=listFor();const L=base.filter(x=>!S.att[x.id]);const pool=(L.length?L:base).slice().sort(()=>Math.random()-.5).slice(0,n);
+function startPractice(n,src){const base=listFor(src);const L=base.filter(x=>!S.att[x.id]);const pool=(L.length?L:base).slice().sort(()=>Math.random()-.5).slice(0,n);
   V.list=pool;V.m='prac';V.focus=true;V.i=0;render();window.scrollTo(0,0)}
 function render(){
   header();sidebar();ddRender();
   if(V.m==='dash')return dash();
   if(V.m==='pri')return priPage();
-  const L=listFor();const t=V.m==='topic'&&V.t>=0?SUBJ[cur].topics[V.t]:null;
+  const cAll=listFor('all').length,cP=listFor('pyq').length,cR=listFor('prac').length;
+  const L0=listFor();const L=L0.slice().sort((a,b)=>(isP(a.q)?1:0)-(isP(b.q)?1:0));const t=V.m==='topic'&&V.t>=0?SUBJ[cur].topics[V.t]:null;
   const title={topic:t?t.title:SUBJ[cur].subject+' — all topics',bm:'⭐ Bookmarked',miss:'❌ My mistakes',new:'🆕 Unattempted in '+SUBJ[cur].subject,prac:'🎲 Practice set'}[V.m];
   const done=L.filter(x=>S.att[x.id]).length,ok=L.filter(x=>S.att[x.id]?.ok).length;
   let h=`<h2>${esc(title)}</h2><p class="sub">${L.length} questions · ${done} attempted${done?` · ${Math.round(ok/done*100)}% correct`:''}</p>
   <div class="row noprint" style="margin-bottom:14px">
-    <button class="pri" onclick="startPractice(10)">▶ Practice 10 random</button>
+    <button class="pri" onclick="startPractice(10)">▶ 10 random</button><button onclick="startPractice(10,'pyq')">📄 10 random PYQ</button><button style="border-color:#0d9488;color:#0f766e" onclick="startPractice(10,'prac')">✍️ 10 random practice</button>
     <button onclick="V.focus=!V.focus;V.i=0;render()">${V.focus?'📃 Show full list':'🔍 One at a time'}</button>
     <button onclick="window.print()">🖨 Print / PDF</button>
   </div>
-  <div class="row noprint" style="margin-bottom:10px">
-    <span class="sub" style="margin:0">Show:</span>
-    ${[['all','All'],['pyq','Past papers (PYQ)'],['prac','Practice']].map(([k,l])=>`<button class="${SRC===k?'pri':''}" onclick="setSrc('${k}')">${l}</button>`).join('')}
+  <div class="row noprint" style="margin-bottom:12px">
+    <div class="sg">${[['all','All',cAll,''],['pyq','📄 Past papers',cP,''],['prac','✍️ Practice',cR,'p']].map(([k,l,c,cls])=>`<button class="${SRC===k?'on '+cls:''}" onclick="setSrc('${k}')">${l}<span>${c}</span></button>`).join('')}</div>
   </div>
   <div class="row noprint" style="margin-bottom:14px">
     <label class="tg"><input type="checkbox" ${REV?'checked':''} onchange="setRev(this.checked)"><i></i>Revision mode — show all answers</label>
@@ -294,7 +307,9 @@ function render(){
   else if(V.focus){V.i=Math.min(V.i,L.length-1);const x=L[V.i];
     h+=`<div class="bar" style="margin-bottom:10px"><i style="width:${Math.round((V.i+1)/L.length*100)}%"></i></div><div class="sub">Question ${V.i+1} of ${L.length} · keys: A–D answer, ← → move</div>`+qhtml(x)+
     `<div class="row"><button ${V.i?'':'disabled'} onclick="V.i--;render()">← Prev</button><button id="nextBtn" class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div>`}
-  else h+=L.map(qhtml).join('');
+  else{const sec=(cls,label,arr)=>{if(!arr.length)return '';const d=arr.filter(x=>S.att[x.id]).length;return `<div class="sec ${cls}">${label}<small>${d}/${arr.length} done</small><div class="bar"><i style="width:${arr.length?d/arr.length*100:0}%"></i></div></div>`+arr.map(qhtml).join('')};
+    const A=L.filter(x=>!isP(x.q)),B=L.filter(x=>isP(x.q));
+    h+=sec('pyq','📄 Past-paper questions (PYQ)',A)+sec('prac','✍️ Practice questions',B);}
   $('#view').innerHTML=h;
 }
 
@@ -306,7 +321,7 @@ function dash(){
   const heat=[...Array(105)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-(104-i));const c=S.days[dayKey(d)]?.n||0;const r=c/S.goal;
     return `<i class="${c?r>=1.5?'l4':r>=1?'l3':r>=.5?'l2':'l1':''}" title="${dayKey(d)}: ${c} questions"></i>`}).join('');
   const subj=SUBJ.map((sj,i)=>{const L=allQ(i);const a=L.filter(x=>S.att[x.id]);const ok=a.filter(x=>S.att[x.id].ok).length;
-    return `<div class="item" onclick="go({m:'topic',t:-1,si:${i}})"><span>${esc(sj.subject)}</span><span class="c">${a.length}/${L.length}${a.length?` · ${Math.round(ok/a.length*100)}%`:''}</span></div><div class="bar mini ok"><i style="width:${L.length?a.length/L.length*100:0}%"></i></div>`}).join('');
+    return `<div class="item" onclick="go({m:'topic',t:-1,si:${i}})"><span>${esc(sj.subject)}</span><span class="c">📄${L.filter(x=>!isP(x.q)&&S.att[x.id]).length}/${L.filter(x=>!isP(x.q)).length} · ✍️${L.filter(x=>isP(x.q)&&S.att[x.id]).length}/${L.filter(x=>isP(x.q)).length}${a.length?` · ${Math.round(ok/a.length*100)}%`:''}</span></div><div class="bar mini ok"><i style="width:${L.length?a.length/L.length*100:0}%"></i></div>`}).join('');
   const weak=SUBJ.flatMap((sj,si)=>sj.topics.map((t,ti)=>{const a=t.qs.filter(q=>S.att[sid(si,q.n)]);return{si,ti,t:sj.subject+' › '+t.title,n:a.length,acc:a.length?a.filter(q=>S.att[sid(si,q.n)].ok).length/a.length:1}})).filter(w=>w.n>=3&&w.acc<.7).sort((a,b)=>a.acc-b.acc).slice(0,5);
   const bd=BADGES.map(([id,name,desc])=>`<div class="badge ${S.badges[id]?'on':''}"><b>${name}</b><span>${desc}</span></div>`).join('');
   $('#view').innerHTML=`<h2>Your progress</h2><p class="sub">Small steps daily beat big pushes. Hit your goal to keep the streak alive.</p>
@@ -345,12 +360,12 @@ document.addEventListener('keydown',e=>{
 
 const ICONS={'Computer Networks':'🌐','Design & Analysis of Algorithms':'🧮','Emerging Trends':'🤖','Computer Graphics & Multimedia':'🎨','Python':'🐍','Software Engineering':'🛠️','Internet & Web Technologies':'🕸️','Digital Electronics':'🔌','Operating Systems & Linux':'🐧','Database Management System':'🗄️','Computer Fundamentals & Architecture':'💻','Mathematics':'📐','Programming, DS & Java':'☕'};
 const icon=n=>ICONS[n]||'📘';
-function subjStat(i){const L=allQ(i),a=L.filter(x=>S.att[x.id]);return{t:L.length,a:a.length,ok:a.filter(x=>S.att[x.id].ok).length}}
+function subjStat(i){const L=allQ(i),a=L.filter(x=>S.att[x.id]);return{t:L.length,a:a.length,ok:a.filter(x=>S.att[x.id].ok).length,py:L.filter(x=>!isP(x.q)).length,pr:L.filter(x=>isP(x.q)).length}}
 function ddRender(){
   const sj=SUBJ[cur],st=subjStat(cur);
   $('#ddb').innerHTML=`<span class="ic">${icon(sj.subject)}</span><span class="tx"><b>${esc(sj.subject)}</b><small>${st.a}/${st.t} done${st.a?` · ${Math.round(st.ok/st.a*100)}% correct`:''}</small></span><svg class="chev" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l5 5 5-5"/></svg>`;
   $('#ddm').innerHTML=SUBJ.map((s,i)=>{const t=subjStat(i);const p=t.t?Math.round(t.a/t.t*100):0;
-    return `<div class="ddo ${i===cur?'sel':''}" role="option" data-i="${i}"><span class="ic">${icon(s.subject)}</span><span class="tx"><b>${esc(s.subject)}</b><small>${t.t} questions · ${t.a} done</small><div class="bar ok"><i style="width:${p}%"></i></div></span><span class="pc">${p}%</span></div>`}).join('');
+    return `<div class="ddo ${i===cur?'sel':''}" role="option" data-i="${i}"><span class="ic">${icon(s.subject)}</span><span class="tx"><b>${esc(s.subject)}</b><small>📄 ${t.py} PYQ · ✍️ ${t.pr} practice · ${t.a} done</small><div class="bar ok"><i style="width:${p}%"></i></div></span><span class="pc">${p}%</span></div>`}).join('');
 }
 function ddOpen(o){const m=$('#ddm');m.hidden=!o;$('#ddb').setAttribute('aria-expanded',o);if(o){ddRender();m.querySelector('.sel')?.scrollIntoView({block:'nearest'})}}
 $('#ddb').onclick=e=>{e.stopPropagation();ddOpen($('#ddm').hidden)};
