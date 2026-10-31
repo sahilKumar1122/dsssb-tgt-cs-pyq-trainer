@@ -49,6 +49,8 @@ h2{margin:0 0 4px;font-size:22px}
 .opt.wrong{border-color:var(--bad)!important;background:var(--badbg)!important}
 .sol{display:none;margin-top:10px;padding:10px 13px;border-left:3px solid var(--ok);background:var(--okbg);border-radius:8px;white-space:pre-wrap}
 .q.show .sol{display:block}
+.relc{display:none;margin-top:8px;padding:9px 13px;border-left:3px solid var(--acc);background:var(--acc2);border-radius:8px;font-size:14px}.q.show .relc{display:block}.q.brief .relc{display:none}
+.deep{background:#f3f8ff;border-color:#cfe0fb}
 .res{font-weight:700;margin-top:8px}.res.ok{color:var(--ok)}.res.no{color:var(--bad)}
 .tb{border-collapse:collapse;margin:6px 0 12px;font-size:14px}.tb th,.tb td{border:1px solid var(--line);padding:6px 12px;text-align:left}.tb th{background:var(--bg)}
 .fig{color:var(--mute);font-style:italic}
@@ -220,7 +222,7 @@ function qhtml(x){
    ${q.note?`<div class="fig" style="margin-bottom:8px">${esc(q.note)}</div>`:''}
    ${opts}
    ${a?`<div class="res ${a.ok?'ok':'no'}">${a.ok?'✓ Correct':'✗ Wrong — correct answer: '+q.ans}</div>`:rev?'':`<button style="margin-top:6px" onclick="this.closest('.q').classList.toggle('show')">Peek at answer</button>`}
-   <div class="sol"><b>Answer: ${q.ans}${q.opts[q.ans]?' — '+esc(q.opts[q.ans]):''}</b><span class="exp"><br>${esc(q.sol)}</span></div></div>`;
+   <div class="sol"><b>Answer: ${q.ans}${q.opts[q.ans]?' — '+esc(q.opts[q.ans]):''}</b><span class="exp"><br>${esc(q.sol)}</span></div>${q.rel?`<div class="relc"><b>🔗 Related concepts</b><br>${md(q.rel)}</div>`:''}</div>`;
 }
 
 function findQ(id){const[s,n]=id.split(':');const si=SUBJ.findIndex(x=>x.slug===s);for(const[ti,t]of SUBJ[si].topics.entries())for(const q of t.qs)if(String(q.n)===n)return{q,ti,si,id,topic:t.title}}
@@ -258,7 +260,7 @@ function render(){
     <label class="tg"><input type="checkbox" ${REV?'checked':''} onchange="setRev(this.checked)"><i></i>Revision mode — show all answers</label>
     <label class="tg ${REV?'':'dis'}"><input type="checkbox" ${BRIEF?'checked':''} onchange="setBrief(this.checked)"><i></i>Answers only (hide explanations)</label>
   </div>`;
-  if(t)h+=`<details class="theory" ${V.focus?'':'open'}><summary>Must-know theory</summary>${theoryHtml(t.theory)}</details>`;
+  if(t)h+=`<details class="theory" ${V.focus?'':'open'}><summary>Must-know theory</summary>${theoryHtml(t.theory)}</details>`+(t.deep?`<details class="theory deep"><summary>📚 Deep revision notes — concepts beyond the PYQs</summary>${theoryHtml(t.deep)}</details>`:'');
   if(!L.length)h+=`<div class="empty">Nothing here yet.</div>`;
   else if(V.focus){V.i=Math.min(V.i,L.length-1);const x=L[V.i];
     h+=`<div class="bar" style="margin-bottom:10px"><i style="width:${Math.round((V.i+1)/L.length*100)}%"></i></div><div class="sub">Question ${V.i+1} of ${L.length} · keys: A–D answer, ← → move</div>`+qhtml(x)+
