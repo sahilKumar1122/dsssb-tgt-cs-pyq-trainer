@@ -425,7 +425,7 @@ document.addEventListener('keydown',e=>{
 });
 
 
-const ICONS={'Computer Networks':'🌐','Design & Analysis of Algorithms':'🧮','Emerging Trends':'🤖','Computer Graphics & Multimedia':'🎨','Python':'🐍','Software Engineering':'🛠️','Internet & Web Technologies':'🕸️','Digital Electronics':'🔌','Operating Systems & Linux':'🐧','Database Management System':'🗄️','Computer Fundamentals & Architecture':'💻','Mathematics':'📐','Teaching Methodology':'🎓','Programming, DS & Java':'☕'};
+const ICONS={'Computer Networks':'🌐','Design & Analysis of Algorithms':'🧮','Emerging Trends':'🤖','Computer Graphics & Multimedia':'🎨','Python':'🐍','Software Engineering':'🛠️','Internet & Web Technologies':'🕸️','Digital Electronics':'🔌','Operating Systems & Linux':'🐧','Database Management System':'🗄️','Computer Fundamentals & Architecture':'💻','Mathematics':'📐','Business Studies & Management':'💼','Official Syllabus Gap-Fill':'🧩','Teaching Methodology':'🎓','Programming, DS & Java':'☕'};
 const icon=n=>ICONS[n]||'📘';
 function subjStat(i){const L=allQ(i),a=L.filter(x=>S.att[x.id]);return{t:L.length,a:a.length,ok:a.filter(x=>S.att[x.id].ok).length,py:L.filter(x=>!isP(x.q)).length,pr:L.filter(x=>isP(x.q)).length}}
 function ddRender(){
