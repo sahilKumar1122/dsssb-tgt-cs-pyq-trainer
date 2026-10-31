@@ -134,6 +134,7 @@ let S;
 try{S=JSON.parse(localStorage.getItem('kgpyq_v1'))}catch(e){}
 S=Object.assign({att:{},days:{},bm:{},goal:15,xp:0,badges:{}},S||{});
 const save=()=>{try{localStorage.setItem('kgpyq_v1',JSON.stringify(S))}catch(e){}};
+let SRC=localStorage.getItem('kgpyq_src')||'all';
 let REV=localStorage.getItem('kgpyq_rev')==='1',BRIEF=localStorage.getItem('kgpyq_brief')==='1';
 let PRI=null,PT={};
 let SUBJ=[],cur=0,V={m:'dash',t:-1,focus:false,i:0,list:null};
@@ -182,6 +183,7 @@ function listFor(){
   if(V.m==='topic'){L=V.t<0?allQ(cur):SUBJ[cur].topics[V.t].qs.map(q=>({q,ti:V.t,si:cur,id:sid(cur,q.n),topic:SUBJ[cur].topics[V.t].title}))}
   else{const base=SUBJ.flatMap((_,i)=>allQ(i));
     L=V.m==='bm'?base.filter(x=>S.bm[x.id]):V.m==='miss'?base.filter(x=>S.att[x.id]&&!S.att[x.id].ok):V.m==='new'?allQ(cur).filter(x=>!S.att[x.id]):(V.list||[])}
+  if(SRC==='pyq')L=L.filter(x=>x.q.src!=='Practice');else if(SRC==='prac')L=L.filter(x=>x.q.src==='Practice');
   const term=$('#search').value.trim().toLowerCase();
   if(term)L=L.filter(x=>(x.q.stem+Object.values(x.q.opts).join(' ')+x.q.sol).toLowerCase().includes(term));
   return L;
@@ -279,6 +281,10 @@ function render(){
     <button onclick="V.focus=!V.focus;V.i=0;render()">${V.focus?'📃 Show full list':'🔍 One at a time'}</button>
     <button onclick="window.print()">🖨 Print / PDF</button>
   </div>
+  <div class="row noprint" style="margin-bottom:10px">
+    <span class="sub" style="margin:0">Show:</span>
+    ${[['all','All'],['pyq','Past papers (PYQ)'],['prac','Practice']].map(([k,l])=>`<button class="${SRC===k?'pri':''}" onclick="setSrc('${k}')">${l}</button>`).join('')}
+  </div>
   <div class="row noprint" style="margin-bottom:14px">
     <label class="tg"><input type="checkbox" ${REV?'checked':''} onchange="setRev(this.checked)"><i></i>Revision mode — show all answers</label>
     <label class="tg ${REV?'':'dis'}"><input type="checkbox" ${BRIEF?'checked':''} onchange="setBrief(this.checked)"><i></i>Answers only (hide explanations)</label>
@@ -321,6 +327,7 @@ function dash(){
   <h3 style="margin:18px 0 8px">Badges</h3><div class="badges">${bd}</div>
   <div class="row noprint" style="margin-top:22px"><button onclick="exportP()">⬇ Export progress</button><button onclick="document.getElementById('imp').click()">⬆ Import</button><input id="imp" type="file" accept=".json" hidden onchange="importP(this.files[0])"><button onclick="if(confirm('Reset ALL progress?')){S={att:{},days:{},bm:{},goal:15,xp:0,badges:{}};save();render()}">Reset</button></div>`;
 }
+function setSrc(k){SRC=k;try{localStorage.setItem('kgpyq_src',k)}catch(e){}render()}
 function setRev(v){REV=v;try{localStorage.setItem('kgpyq_rev',v?'1':'0')}catch(e){}render()}
 function setBrief(v){BRIEF=v;try{localStorage.setItem('kgpyq_brief',v?'1':'0')}catch(e){}render()}
 function startPractice10(){V.m='new';startPractice(10)}
