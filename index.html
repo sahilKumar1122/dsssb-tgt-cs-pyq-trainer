@@ -112,7 +112,7 @@ h2{margin:0 0 4px;font-size:22px}
   <label class="tg" title="Show all answers to skim and revise"><input type="checkbox" id="hRev" onchange="setRev(this.checked)"><i></i>Revise</label>
   <div class="lvl" id="hLvl"></div>
   <div style="flex:1"></div>
-  <button onclick="go({m:'dash'})">📊 Dashboard</button>
+  <button onclick="go({m:'pri'})">🎯 Priority</button><button onclick="go({m:'dash'})">📊 Dashboard</button>
 </header>
 <div class="app">
 <aside>
@@ -135,6 +135,7 @@ try{S=JSON.parse(localStorage.getItem('kgpyq_v1'))}catch(e){}
 S=Object.assign({att:{},days:{},bm:{},goal:15,xp:0,badges:{}},S||{});
 const save=()=>{try{localStorage.setItem('kgpyq_v1',JSON.stringify(S))}catch(e){}};
 let REV=localStorage.getItem('kgpyq_rev')==='1',BRIEF=localStorage.getItem('kgpyq_brief')==='1';
+let PRI=null,PT={};
 let SUBJ=[],cur=0,V={m:'dash',t:-1,focus:false,i:0,list:null};
 const sid=(si,n)=>SUBJ[si].slug+':'+n;
 const attemptsToday=()=>(S.days[today()]||{n:0}).n;
@@ -190,17 +191,38 @@ function sidebar(){
   const st=SUBJ.flatMap((_,i)=>allQ(i));
   const bm=st.filter(x=>S.bm[x.id]).length,miss=st.filter(x=>S.att[x.id]&&!S.att[x.id].ok).length,nw=allQ(cur).filter(x=>!S.att[x.id]).length;
   const it=(m,label,c)=>`<div class="item ${V.m===m?'on':''}" onclick="go({m:'${m}'})"><span>${label}</span><span class="c">${c}</span></div>`;
-  $('#smart').innerHTML=it('dash','📊 Dashboard','')+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('bm','⭐ Bookmarked',bm);
+  $('#smart').innerHTML=it('dash','📊 Dashboard','')+it('pri','🎯 What to study first','')+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('bm','⭐ Bookmarked',bm);
   let h='',last='';const sj=SUBJ[cur];
   h+=`<div class="item ${V.m==='topic'&&V.t<0?'on':''}" onclick="go({m:'topic',t:-1})"><span>All topics</span><span class="c">${allQ(cur).filter(x=>S.att[x.id]).length}/${allQ(cur).length}</span></div>`;
   sj.topics.forEach((t,i)=>{
     if(t.unit!==last){h+=`<div class="unit">${esc(t.unit)}</div>`;last=t.unit}
     const d=t.qs.filter(q=>S.att[sid(cur,q.n)]).length,p=t.qs.length?Math.round(d/t.qs.length*100):0;
-    h+=`<div class="item ${V.m==='topic'&&V.t===i?'on':''}" onclick="go({m:'topic',t:${i}})"><span>${esc(t.title)}</span><span class="c">${d}/${t.qs.length}</span></div><div class="bar mini ok"><i style="width:${p}%"></i></div>`;
+    h+=`<div class="item ${V.m==='topic'&&V.t===i?'on':''}" onclick="go({m:'topic',t:${i}})"><span>${prBadge(cur,t.title)}${esc(t.title)}</span><span class="c">${d}/${t.qs.length}</span></div><div class="bar mini ok"><i style="width:${p}%"></i></div>`;
   });
   $('#topics').innerHTML=h;
 }
 
+const TB={1:['🔥','High priority'],2:['⭐','Medium priority'],3:['·','Lower priority']};
+function prBadge(si,title){const p=PT[SUBJ[si].slug+'|'+title];return p?`<span title="${TB[p.tier][1]} · ${p.recent} recent TGT-CS Qs" style="margin-right:5px">${TB[p.tier][0]}</span>`:''}
+function priPage(){
+  if(!PRI){$('#view').innerHTML='<div class="empty">Priority data not available.</div>';return}
+  const prog=(slug)=>{const si=SUBJ.findIndex(s=>s.slug===slug);if(si<0)return{a:0,t:0};const st=subjStat(si);return{a:st.a,t:st.t}};
+  const maxS=Math.max(...PRI.subjects.map(s=>s.share));
+  const rows=PRI.subjects.map((s,i)=>{const p=prog(s.slug),tg=s.kinds['TGT CS']||0;
+    return `<tr style="cursor:pointer" onclick="go({m:'topic',t:-1,si:${SUBJ.findIndex(x=>x.slug===s.slug)}})"><td>${i+1}</td><td>${TB[s.tier][0]} <b>${esc(s.subject)}</b></td><td>${s.n}</td><td>${tg}</td>
+    <td style="min-width:140px"><div class="bar"><i style="width:${s.share/maxS*100}%"></i></div><small>${s.share}% of weighted marks-weight</small></td><td>${p.a}/${p.t}</td></tr>`}).join('');
+  const phases=[[1,'Phase 1 — Start here (covers ~50% of the weighted exam content)'],[2,'Phase 2 — Next (up to ~80%)'],[3,'Phase 3 — Finish with these']];
+  const ph=phases.map(([tier,label])=>{const L=PRI.topics.filter(t=>t.tier===tier);
+    return `<h3 style="margin:18px 0 8px">${label}</h3><div class="card">`+L.map(t=>{const si=SUBJ.findIndex(s=>s.slug===t.slug);const ti=si<0?-1:SUBJ[si].topics.findIndex(x=>x.title===t.title);
+      const d=ti<0?0:SUBJ[si].topics[ti].qs.filter(q=>S.att[sid(si,q.n)]).length;
+      return `<div class="item" onclick="go({m:'topic',t:${ti},si:${si}})"><span>${esc(t.subject.split(' ')[0])} › ${esc(t.title)}</span><span class="c">${t.n} Qs · ${t.recent} recent · ${d}/${t.n} done</span></div>`}).join('')+`</div>`}).join('');
+  $('#view').innerHTML=`<h2>🎯 What to study first</h2>
+  <p class="sub">Ranked from the questions actually asked in DSSSB papers (TGT CS, PGT CS and TGT Maths), weighted by relevance and recency. Recent TGT Computer Science papers count most.</p>
+  <div class="card" style="margin-bottom:14px;font-size:14px"><b>How the score works:</b> each PYQ is worth a weight — <b>TGT CS 2023–25 = 4/3 pts</b>, TGT CS 2021 = 2, PGT CS = 1–1.2, TGT Maths paper = 1.5 (Maths only). A topic's score is the sum over its questions; 🔥 = top ~50% of total score, ⭐ = next 30%, rest lower. A topic that keeps coming back in recent TGT papers outranks one that appeared a lot only in old PGT papers.
+  <br><br><b>Not included yet:</b> Teaching Methodology and Section A (GK, reasoning, arithmetic, English, Hindi) — they are the other half of the 200 marks; and Programming/DS/Java is still being added. Treat these ranks as <i>relative within the Computer Science subjects</i>.</div>
+  <div class="card" style="margin-bottom:14px;overflow:auto"><h3>Subjects ranked</h3><table class="tb" style="width:100%"><thead><tr><th>#</th><th>Subject</th><th>PYQs</th><th>TGT-CS Qs</th><th>Weight</th><th>Your progress</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <h3 style="margin:18px 0 6px">Suggested order of topics</h3><p class="sub">Work top to bottom. Within a phase, finish the 🔥 high-density topics first — they repeat the most.</p>${ph}`;
+}
 function theoryHtml(s){
   const L=s.split('\n').filter(l=>l.trim());let out='',ul=[],tb=[];
   const fu=()=>{if(ul.length){out+='<ul>'+ul.join('')+'</ul>';ul=[]}};
@@ -217,7 +239,7 @@ function qhtml(x){
     return `<div class="opt ${c}" onclick="pick('${x.id}','${k}')"><b>${k}</b><span>${esc(q.opts[k])}</span></div>`}).join('');
   const tbl=t?`<table class="tb"><thead><tr>${t.head.map(c=>`<th colspan="${t.rows[0].length/t.head.length}">${esc(c)}</th>`).join('')}</tr></thead><tbody>${t.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`:'';
   return `<div class="q ${a?'done show':''}${rev?' rev show':''}${BRIEF?' brief':''}" id="q_${x.id}">
-   <div class="qh"><span>${esc(SUBJ[x.si].subject)} · Q${q.n} · DSSSB ${esc(q.yr)}</span><button class="star ${S.bm[x.id]?'on':''}" title="Bookmark" onclick="bm('${x.id}')">★</button></div>
+   <div class="qh"><span>${esc(SUBJ[x.si].subject)} · Q${q.n} · ${esc(q.src||('DSSSB '+q.yr))}</span><button class="star ${S.bm[x.id]?'on':''}" title="Bookmark" onclick="bm('${x.id}')">★</button></div>
    <div class="stem">${q.stem?esc(q.stem):'<span class="fig">Figure-based question (figure not captured)</span>'}</div>${tbl}
    ${q.note?`<div class="fig" style="margin-bottom:8px">${esc(q.note)}</div>`:''}
    ${opts}
@@ -247,6 +269,7 @@ function startPractice(n){const base=listFor();const L=base.filter(x=>!S.att[x.i
 function render(){
   header();sidebar();ddRender();
   if(V.m==='dash')return dash();
+  if(V.m==='pri')return priPage();
   const L=listFor();const t=V.m==='topic'&&V.t>=0?SUBJ[cur].topics[V.t]:null;
   const title={topic:t?t.title:SUBJ[cur].subject+' — all topics',bm:'⭐ Bookmarked',miss:'❌ My mistakes',new:'🆕 Unattempted in '+SUBJ[cur].subject,prac:'🎲 Practice set'}[V.m];
   const done=L.filter(x=>S.att[x.id]).length,ok=L.filter(x=>S.att[x.id]?.ok).length;
@@ -334,6 +357,7 @@ document.addEventListener('keydown',e=>{const m=$('#ddm');if(m.hidden){return}
 },true);
 async function load(){
   const idx=await (await fetch('data/index.json',{cache:'no-store'})).json();
+  try{PRI=await (await fetch('data/priority.json',{cache:'no-store'})).json();PRI.topics.forEach(t=>PT[t.slug+'|'+t.title]=t)}catch(e){}
   SUBJ=[];for(const f of idx){const d=await (await fetch('data/'+f,{cache:'no-store'})).json();d.slug=f.replace('.json','');SUBJ.push(d)}
   render();
 }
