@@ -111,6 +111,23 @@ h2{margin:0 0 4px;font-size:22px}
 .sg button.on{background:var(--acc);color:#fff}.sg button.on.p{background:#0d9488}
 .sg button span{opacity:.75;font-weight:500;margin-left:5px}
 .sb2{display:flex;gap:4px;margin:0 10px 6px}.sb2 .bar{flex:1;height:4px}.sb2 .bar.t i{background:#0d9488}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin:12px 0 26px}
+.scard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;transition:.15s;position:relative}
+.scard:hover{border-color:var(--acc);box-shadow:0 8px 24px rgba(79,70,229,.12);transform:translateY(-2px)}
+.scard .top{display:flex;gap:12px;align-items:center}
+.scard .ic{font-size:24px;width:44px;height:44px;border-radius:12px;background:var(--acc2);display:grid;place-items:center;flex:none}
+.scard h4{margin:0;font-size:15px;line-height:1.25}.scard .meta{font-size:12px;color:var(--mute)}
+.scard .ring{width:58px;height:58px;margin:0 0 0 auto;flex:none}.scard .ring div{width:44px;height:44px;font-size:12px}
+.scard .ln{display:flex;justify-content:space-between;font-size:12.5px;margin:10px 0 3px;color:var(--mute)}.scard .ln b{color:var(--ink)}
+.scard .bar.t i{background:#0d9488}
+.scard .nx{margin-top:12px;padding:8px 10px;border-radius:10px;background:var(--bg);font-size:12.5px}
+.tier{position:absolute;top:10px;right:12px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px}
+.tier.t1{background:#fee2e2;color:#b91c1c}.tier.t2{background:#fef3c7;color:#b45309}.tier.t3{background:#e5e7eb;color:#4b5563}
+.tmap{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.tmap h4{margin:0 0 8px;font-size:14px;display:flex;justify-content:space-between}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chp{font-size:12px;padding:5px 9px;border-radius:8px;border:1px solid var(--line);cursor:pointer;background:linear-gradient(to right,#bbf7d0 var(--p),#f3f4f8 var(--p));white-space:nowrap}
+.chp:hover{border-color:var(--acc)}
 @media (max-width:820px){.app{grid-template-columns:1fr}aside{position:static;height:auto}}
 @media print{header,aside,.noprint{display:none}.app{display:block}.sol{display:block!important}.q{break-inside:avoid}}
 </style>
@@ -123,7 +140,7 @@ h2{margin:0 0 4px;font-size:22px}
   <label class="tg" title="Show all answers to skim and revise"><input type="checkbox" id="hRev" onchange="setRev(this.checked)"><i></i>Revise</label>
   <div class="lvl" id="hLvl"></div>
   <div style="flex:1"></div>
-  <button onclick="go({m:'pri'})">🎯 Priority</button><button onclick="go({m:'dash'})">📊 Dashboard</button>
+  <button onclick="go({m:'all'})">🗂 All subjects</button><button onclick="go({m:'pri'})">🎯 Priority</button><button onclick="go({m:'dash'})">📊 Dashboard</button>
 </header>
 <div class="app">
 <aside>
@@ -148,7 +165,7 @@ const save=()=>{try{localStorage.setItem('kgpyq_v1',JSON.stringify(S))}catch(e){
 let SRC=localStorage.getItem('kgpyq_src')||'all';
 let REV=localStorage.getItem('kgpyq_rev')==='1',BRIEF=localStorage.getItem('kgpyq_brief')==='1';
 let PRI=null,PT={};
-let SUBJ=[],cur=0,V={m:'dash',t:-1,focus:false,i:0,list:null};
+let SUBJ=[],cur=0,V={m:'all',t:-1,focus:false,i:0,list:null};
 const sid=(si,n)=>SUBJ[si].slug+':'+n;
 const attemptsToday=()=>(S.days[today()]||{n:0}).n;
 const lvlOf=xp=>Math.floor(Math.sqrt(xp/40))+1;
@@ -205,7 +222,7 @@ function sidebar(){
   const st=SUBJ.flatMap((_,i)=>allQ(i));
   const bm=st.filter(x=>S.bm[x.id]).length,miss=st.filter(x=>S.att[x.id]&&!S.att[x.id].ok).length,nw=allQ(cur).filter(x=>!S.att[x.id]).length;
   const it=(m,label,c)=>`<div class="item ${V.m===m?'on':''}" onclick="go({m:'${m}'})"><span>${label}</span><span class="c">${c}</span></div>`;
-  $('#smart').innerHTML=it('dash','📊 Dashboard','')+it('pri','🎯 What to study first','')+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('bm','⭐ Bookmarked',bm);
+  $('#smart').innerHTML=it('all','🗂 All subjects','')+it('dash','📊 Dashboard','')+it('pri','🎯 What to study first','')+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('bm','⭐ Bookmarked',bm);
   let h='',last='';const sj=SUBJ[cur];
   h+=`<div class="item ${V.m==='topic'&&V.t<0?'on':''}" onclick="go({m:'topic',t:-1})"><span>All topics</span><span class="c">${allQ(cur).filter(x=>S.att[x.id]).length}/${allQ(cur).length}</span></div>`;
   sj.topics.forEach((t,i)=>{
@@ -219,6 +236,37 @@ function sidebar(){
 
 const TB={1:['🔥','High priority'],2:['⭐','Medium priority'],3:['·','Lower priority']};
 function prBadge(si,title){const p=PT[SUBJ[si].slug+'|'+title];return p?`<span title="${TB[p.tier][1]} · ${p.recent} recent TGT-CS Qs" style="margin-right:5px">${TB[p.tier][0]}</span>`:''}
+
+function allPage(){
+  if(!SUBJ.length)return;
+  let tD=0,tN=0,tOk=0,wDone=0,wTot=0;
+  const cards=SUBJ.map((sj,i)=>{
+    const L=allQ(i),a=L.filter(x=>S.att[x.id]),ok=a.filter(x=>S.att[x.id].ok).length;
+    const A=L.filter(x=>!isP(x.q)),B=L.filter(x=>isP(x.q));
+    const dA=A.filter(x=>S.att[x.id]).length,dB=B.filter(x=>S.att[x.id]).length;
+    tD+=a.length;tN+=L.length;tOk+=ok;
+    sj.topics.forEach(t=>{const p=PT[sj.slug+'|'+t.title];if(p&&t.qs.length){wTot+=p.score;wDone+=p.score*(t.qs.filter(q=>S.att[sid(i,q.n)]).length/t.qs.length)}});
+    const pr=PRI&&PRI.subjects.find(s=>s.slug===sj.slug);
+    const nxt=sj.topics.map((t,ti)=>({t,ti,p:PT[sj.slug+'|'+t.title],d:t.qs.filter(q=>S.att[sid(i,q.n)]).length})).filter(o=>o.d<o.t.qs.length).sort((x,y)=>(x.p?x.p.tier:9)-(y.p?y.p.tier:9)||(y.p?y.p.score:0)-(x.p?x.p.score:0))[0];
+    const pct=L.length?Math.round(a.length/L.length*100):0;
+    return `<div class="scard" onclick="go({m:'topic',t:-1,si:${i}})">
+      ${pr?`<span class="tier t${pr.tier}">${TB[pr.tier][0]} ${['','High','Medium','Lower'][pr.tier]}</span>`:''}
+      <div class="top"><span class="ic">${icon(sj.subject)}</span><div style="min-width:0;padding-right:62px"><h4>${esc(sj.subject)}</h4><div class="meta">${sj.topics.length} topics · ${L.length} questions${pr?` · ${pr.share}% weight`:''}</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:10px"><div style="flex:1">
+        <div class="ln"><span>📄 Past papers</span><b>${dA}/${A.length}</b></div><div class="bar"><i style="width:${A.length?dA/A.length*100:0}%"></i></div>
+        <div class="ln"><span>✍️ Practice</span><b>${dB}/${B.length}</b></div><div class="bar t"><i style="width:${B.length?dB/B.length*100:0}%"></i></div></div>
+        <div class="ring" style="--p:${pct}"><div>${pct}%</div></div></div>
+      <div class="ln" style="margin-top:10px"><span>Accuracy</span><b>${a.length?Math.round(ok/a.length*100)+'%':'—'}</b></div>
+      <div class="nx">${nxt?`▶ <b>Next:</b> ${esc(nxt.t.title)} <span style="color:var(--mute)">(${nxt.d}/${nxt.t.qs.length})</span>`:'✅ Subject complete'}</div></div>`}).join('');
+  const maps=SUBJ.map((sj,i)=>`<div class="tmap"><h4><span>${icon(sj.subject)} ${esc(sj.subject)}</span></h4><div class="chips">${sj.topics.map((t,ti)=>{const d=t.qs.filter(q=>S.att[sid(i,q.n)]).length,p=t.qs.length?Math.round(d/t.qs.length*100):0;const pb=PT[sj.slug+'|'+t.title];
+    return `<span class="chp" style="--p:${p}%" title="${esc(t.title)} — ${d}/${t.qs.length}" onclick="go({m:'topic',t:${ti},si:${i}})">${pb?TB[pb.tier][0]+' ':''}${esc(t.title.replace(/^\d+\.\s*/,'').slice(0,34))} · ${p}%</span>`}).join('')}</div></div>`).join('');
+  $('#view').innerHTML=`<h2>🗂 All subjects</h2><p class="sub">Every subject and topic at a glance. Click a card to open it, or any topic chip to jump straight in.</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">
+   <div class="card"><h3>Overall</h3><div class="big">${tN?(tD/tN*100).toFixed(1):0}%</div><div class="sub">${tD} of ${tN} questions</div></div>
+   <div class="card"><h3>Exam-weighted coverage</h3><div class="big">${wTot?(wDone/wTot*100).toFixed(1):0}%</div><div class="sub">progress counted by topic importance</div></div>
+   <div class="card"><h3>Accuracy</h3><div class="big">${tD?Math.round(tOk/tD*100):0}%</div><div class="sub">${tOk} correct of ${tD}</div></div></div>
+  <div class="sgrid">${cards}</div><h3 style="margin:0 0 10px">Topic map <span class="sub" style="font-weight:400">(green fill = % done · 🔥 high, ⭐ medium priority)</span></h3>${maps}`;
+}
 function priPage(){
   if(!PRI){$('#view').innerHTML='<div class="empty">Priority data not available.</div>';return}
   const prog=(slug)=>{const si=SUBJ.findIndex(s=>s.slug===slug);if(si<0)return{a:0,t:0};const st=subjStat(si);return{a:st.a,t:st.t}};
@@ -285,6 +333,7 @@ function render(){
   header();sidebar();ddRender();
   if(V.m==='dash')return dash();
   if(V.m==='pri')return priPage();
+  if(V.m==='all')return allPage();
   const cAll=listFor('all').length,cP=listFor('pyq').length,cR=listFor('prac').length;
   const L0=listFor();const L=L0.slice().sort((a,b)=>(isP(a.q)?1:0)-(isP(b.q)?1:0));const t=V.m==='topic'&&V.t>=0?SUBJ[cur].topics[V.t]:null;
   const title={topic:t?t.title:SUBJ[cur].subject+' — all topics',bm:'⭐ Bookmarked',miss:'❌ My mistakes',new:'🆕 Unattempted in '+SUBJ[cur].subject,prac:'🎲 Practice set'}[V.m];
@@ -358,7 +407,7 @@ document.addEventListener('keydown',e=>{
 });
 
 
-const ICONS={'Computer Networks':'🌐','Design & Analysis of Algorithms':'🧮','Emerging Trends':'🤖','Computer Graphics & Multimedia':'🎨','Python':'🐍','Software Engineering':'🛠️','Internet & Web Technologies':'🕸️','Digital Electronics':'🔌','Operating Systems & Linux':'🐧','Database Management System':'🗄️','Computer Fundamentals & Architecture':'💻','Mathematics':'📐','Programming, DS & Java':'☕'};
+const ICONS={'Computer Networks':'🌐','Design & Analysis of Algorithms':'🧮','Emerging Trends':'🤖','Computer Graphics & Multimedia':'🎨','Python':'🐍','Software Engineering':'🛠️','Internet & Web Technologies':'🕸️','Digital Electronics':'🔌','Operating Systems & Linux':'🐧','Database Management System':'🗄️','Computer Fundamentals & Architecture':'💻','Mathematics':'📐','Teaching Methodology':'🎓','Programming, DS & Java':'☕'};
 const icon=n=>ICONS[n]||'📘';
 function subjStat(i){const L=allQ(i),a=L.filter(x=>S.att[x.id]);return{t:L.length,a:a.length,ok:a.filter(x=>S.att[x.id].ok).length,py:L.filter(x=>!isP(x.q)).length,pr:L.filter(x=>isP(x.q)).length}}
 function ddRender(){
