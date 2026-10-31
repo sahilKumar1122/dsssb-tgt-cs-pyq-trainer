@@ -164,7 +164,7 @@ S=Object.assign({att:{},days:{},bm:{},goal:15,xp:0,badges:{}},S||{});
 const save=()=>{try{localStorage.setItem('kgpyq_v1',JSON.stringify(S))}catch(e){}};
 let SRC=localStorage.getItem('kgpyq_src')||'all';
 let REV=localStorage.getItem('kgpyq_rev')==='1',BRIEF=localStorage.getItem('kgpyq_brief')==='1';
-let PRI=null,PT={};
+let PRI=null,PT={},SYL=null;
 let SUBJ=[],cur=0,V={m:'all',t:-1,focus:false,i:0,list:null};
 const sid=(si,n)=>SUBJ[si].slug+':'+n;
 const attemptsToday=()=>(S.days[today()]||{n:0}).n;
@@ -206,7 +206,7 @@ function header(){
 }
 
 function allQ(si){return SUBJ[si].topics.flatMap((t,ti)=>t.qs.map(q=>({q,ti,si,id:sid(si,q.n),topic:t.title})))}
-const isP=q=>q.src==='Practice';
+const isP=q=>q.src==='Practice'||q.src==='AI Practice';
 function listFor(srcOv){const SR=srcOv||SRC;
   let L;
   if(V.m==='topic'){L=V.t<0?allQ(cur):SUBJ[cur].topics[V.t].qs.map(q=>({q,ti:V.t,si:cur,id:sid(cur,q.n),topic:SUBJ[cur].topics[V.t].title}))}
@@ -222,7 +222,7 @@ function sidebar(){
   const st=SUBJ.flatMap((_,i)=>allQ(i));
   const bm=st.filter(x=>S.bm[x.id]).length,miss=st.filter(x=>S.att[x.id]&&!S.att[x.id].ok).length,nw=allQ(cur).filter(x=>!S.att[x.id]).length;
   const it=(m,label,c)=>`<div class="item ${V.m===m?'on':''}" onclick="go({m:'${m}'})"><span>${label}</span><span class="c">${c}</span></div>`;
-  $('#smart').innerHTML=it('all','🗂 All subjects','')+it('dash','📊 Dashboard','')+it('pri','🎯 What to study first','')+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('bm','⭐ Bookmarked',bm);
+  $('#smart').innerHTML=it('all','🗂 All subjects','')+it('dash','📊 Dashboard','')+it('pri','🎯 What to study first','')+it('syl','📋 Official syllabus map','')+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('bm','⭐ Bookmarked',bm);
   let h='',last='';const sj=SUBJ[cur];
   h+=`<div class="item ${V.m==='topic'&&V.t<0?'on':''}" onclick="go({m:'topic',t:-1})"><span>All topics</span><span class="c">${allQ(cur).filter(x=>S.att[x.id]).length}/${allQ(cur).length}</span></div>`;
   sj.topics.forEach((t,i)=>{
@@ -267,6 +267,23 @@ function allPage(){
    <div class="card"><h3>Accuracy</h3><div class="big">${tD?Math.round(tOk/tD*100):0}%</div><div class="sub">${tOk} correct of ${tD}</div></div></div>
   <div class="sgrid">${cards}</div><h3 style="margin:0 0 10px">Topic map <span class="sub" style="font-weight:400">(green fill = % done · 🔥 high, ⭐ medium priority)</span></h3>${maps}`;
 }
+
+function sylPage(){
+  if(!SYL){$('#view').innerHTML='<div class="empty">Syllabus data not available.</div>';return}
+  const B={ok:['✅','Covered','#dcfce7','#166534'],thin:['⚠️','Thin','#fef3c7','#92400e'],gap:['❌','Gap','#fee2e2','#991b1b'],ai:['🤖','AI-generated only','#e0e7ff','#3730a3']};
+  const row=it=>{const b=B[it.status];const chips=it.links.map(([slug,ti,title])=>{const si=SUBJ.findIndex(s=>s.slug===slug);return si<0?'':`<span class="chp" style="--p:0%" onclick="go({m:'topic',t:${ti},si:${si}})">${esc(title.replace(/^\d+\.\s*/,'').slice(0,38))}</span>`}).join('');
+    return `<div class="tmap"><h4><span>${it.no}. ${esc(it.name)}</span><span style="font-size:12px;padding:2px 10px;border-radius:99px;background:${b[2]};color:${b[3]};font-weight:700">${b[0]} ${b[1]}</span></h4>
+    <div class="sub" style="margin:0 0 8px">📄 ${it.pyq} PYQ · ✍️ ${it.prac} practice${it.ai?` · 🤖 ${it.ai} AI-generated`:''}</div><div class="chips">${chips||'<span class="sub">No questions yet</span>'}</div></div>`};
+  const cs=SYL.items.filter(x=>x.sec==='cs'),tc=SYL.items.filter(x=>x.sec==='teaching');
+  const cnt=a=>['ok','thin','gap','ai'].map(k=>a.filter(x=>x.status===k).length);
+  const [o,t,g,ai]=cnt(cs);
+  $('#view').innerHTML=`<h2>📋 Official syllabus map</h2>
+  <p class="sub">Every topic in the DSSSB syllabus for <b>TGT Computer Science (Post Code 41/26, DoE)</b>, matched to what's in this trainer. Source: <a href="${SYL.source}" target="_blank" rel="noopener">official syllabus PDF on dsssb.delhi.gov.in</a>.</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))"><div class="card"><h3>Covered</h3><div class="big">✅ ${o}</div></div><div class="card"><h3>Thin</h3><div class="big">⚠️ ${t}</div></div><div class="card"><h3>AI-generated only</h3><div class="big">🤖 ${ai}</div></div><div class="card"><h3>Gap</h3><div class="big">❌ ${g}</div></div></div>
+  <h3 style="margin:8px 0">Section B — Computer Science (32 topics)</h3>${cs.map(row).join('')}
+  <h3 style="margin:22px 0 8px">Teaching Education & Methodology (10 topics)</h3>${tc.map(row).join('')}
+  <p class="sub" style="margin-top:14px">🤖 AI-generated questions were written to cover syllabus topics that have no real past-paper or practice questions. They're original, labelled, and carry less weight — check them against your textbook.</p>`;
+}
 function priPage(){
   if(!PRI){$('#view').innerHTML='<div class="empty">Priority data not available.</div>';return}
   const prog=(slug)=>{const si=SUBJ.findIndex(s=>s.slug===slug);if(si<0)return{a:0,t:0};const st=subjStat(si);return{a:st.a,t:st.t}};
@@ -302,7 +319,7 @@ function qhtml(x){
     return `<div class="opt ${c}" onclick="pick('${x.id}','${k}')"><b>${k}</b><span>${esc(q.opts[k])}</span></div>`}).join('');
   const tbl=t?`<table class="tb"><thead><tr>${t.head.map(c=>`<th colspan="${t.rows[0].length/t.head.length}">${esc(c)}</th>`).join('')}</tr></thead><tbody>${t.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`:'';
   return `<div class="q ${isP(q)?'prac':'pyq'} ${a?'done show':''}${rev?' rev show':''}${BRIEF?' brief':''}" id="q_${x.id}">
-   <div class="qh"><span>${isP(q)?'<span class="bdg prac">✍️ PRACTICE</span>':`<span class="bdg pyq">📄 PYQ · ${esc(q.src||('DSSSB '+q.yr))}</span>`}${esc(SUBJ[x.si].subject)} · ${isP(q)?'P'+(q.n-10000):'Q'+q.n}</span><button class="star ${S.bm[x.id]?'on':''}" title="Bookmark" onclick="bm('${x.id}')">★</button></div>
+   <div class="qh"><span>${q.src==='AI Practice'?'<span class="bdg prac">🤖 AI-GENERATED PRACTICE</span>':isP(q)?'<span class="bdg prac">✍️ PRACTICE</span>':`<span class="bdg pyq">📄 PYQ · ${esc(q.src||('DSSSB '+q.yr))}</span>`}${esc(SUBJ[x.si].subject)} · ${isP(q)?'P'+(q.n-10000):'Q'+q.n}</span><button class="star ${S.bm[x.id]?'on':''}" title="Bookmark" onclick="bm('${x.id}')">★</button></div>
    <div class="stem">${q.stem?esc(q.stem):'<span class="fig">Figure-based question (figure not captured)</span>'}</div>${tbl}
    ${q.note?`<div class="fig" style="margin-bottom:8px">${esc(q.note)}</div>`:''}
    ${opts}
@@ -334,6 +351,7 @@ function render(){
   if(V.m==='dash')return dash();
   if(V.m==='pri')return priPage();
   if(V.m==='all')return allPage();
+  if(V.m==='syl')return sylPage();
   const cAll=listFor('all').length,cP=listFor('pyq').length,cR=listFor('prac').length;
   const L0=listFor();const L=L0.slice().sort((a,b)=>(isP(a.q)?1:0)-(isP(b.q)?1:0));const t=V.m==='topic'&&V.t>=0?SUBJ[cur].topics[V.t]:null;
   const title={topic:t?t.title:SUBJ[cur].subject+' — all topics',bm:'⭐ Bookmarked',miss:'❌ My mistakes',new:'🆕 Unattempted in '+SUBJ[cur].subject,prac:'🎲 Practice set'}[V.m];
@@ -428,6 +446,7 @@ document.addEventListener('keydown',e=>{const m=$('#ddm');if(m.hidden){return}
 },true);
 async function load(){
   const idx=await (await fetch('data/index.json',{cache:'no-store'})).json();
+  try{SYL=await (await fetch('data/syllabus.json',{cache:'no-store'})).json()}catch(e){}
   try{PRI=await (await fetch('data/priority.json',{cache:'no-store'})).json();PRI.topics.forEach(t=>PT[t.slug+'|'+t.title]=t)}catch(e){}
   SUBJ=[];for(const f of idx){const d=await (await fetch('data/'+f,{cache:'no-store'})).json();d.slug=f.replace('.json','');SUBJ.push(d)}
   render();
