@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mock Test Simulator</title>
+<style>
+:root{color-scheme:light;--bg:#f5f6fa;--card:#fff;--ink:#1c2030;--mute:#6b7285;--line:#e4e7ee;--acc:#4f46e5;--acc2:#eef0ff;--ok:#0f9d6a;--okbg:#e7f7f0;--bad:#d64545;--badbg:#fdeded;--warn:#fff8e6;--mark:#8b5cf6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:var(--acc)}button{font:inherit;cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 14px}.btn.g{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.ok{background:var(--ok)}.btn:disabled{opacity:.5}
+input[type=password],input[type=text]{padding:9px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;width:260px;max-width:100%}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sp{flex:1}.mute{color:var(--mute);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.tag{display:inline-block;background:var(--acc2);color:var(--acc);border-radius:99px;padding:1px 9px;font-size:12px;margin-right:4px}
+.top{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);z-index:5}
+.top .wrap{padding:8px 16px}
+.timer{font-variant-numeric:tabular-nums;font-weight:700;font-size:18px}.timer.low{color:var(--bad)}
+.lay{display:grid;grid-template-columns:1fr 280px;gap:12px}@media(max-width:800px){.lay{grid-template-columns:1fr}}
+.opt{display:flex;gap:10px;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;cursor:pointer;background:#fff;text-align:left;width:100%}
+.opt:hover{border-color:var(--acc)}.opt.sel{border-color:var(--acc);background:var(--acc2)}
+.opt.right{border-color:var(--ok);background:var(--okbg)}.opt.wrong{border-color:var(--bad);background:var(--badbg)}
+.opt b{width:22px;flex:none}.hi{color:var(--mute);font-size:14px}
+.q{white-space:pre-wrap}.q img{max-width:100%}
+.pal{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.pal button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 0}
+.pal .a{background:var(--ok);color:#fff;border-color:var(--ok)}.pal .m{background:var(--mark);color:#fff;border-color:var(--mark)}.pal .am{background:var(--ok);color:#fff;box-shadow:0 0 0 3px var(--mark)}.pal .c{outline:2px solid var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}.stat{background:var(--bg);border-radius:10px;padding:10px;text-align:center}.stat b{display:block;font-size:22px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.sec{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.sec button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:3px 12px;font-size:13px}.sec .on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.expl{background:var(--warn);border-radius:10px;padding:10px 12px;margin-top:8px;white-space:pre-wrap;font-size:14px}
+</style></head><body>
+<div id="app"></div>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const L=String.fromCharCode;
+const store={g(){try{return JSON.parse(localStorage.getItem('kgtests_v1'))||{}}catch(e){return{}}},s(o){try{localStorage.setItem('kgtests_v1',JSON.stringify(o))}catch(e){}}};
+let T=null,S=store.g();S.att=S.att||[];
+let cur=null,tick=null,showHi=false,real=true;
+
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decrypt(pw){
+  const e=await (await fetch('data/tests.enc.json',{cache:'no-store'})).json();
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+  const k=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(e.salt),iterations:e.iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(e.iv)},k,b64(e.ct))));
+}
+function lock(msg){
+  app.innerHTML=`<div class="wrap"><div class="card" style="max-width:420px;margin:60px auto"><h2 style="margin-top:0">🔒 Mock Test Simulator</h2>
+  <p class="mute">Private. Test data is encrypted; enter your passphrase.</p>
+  <form id="f" class="row"><input id="pw" type="password" placeholder="Passphrase" autofocus><button class="btn">Unlock</button></form>
+  <p class="bad" id="er">${msg||''}</p><p><a href="index.html">← Back to trainer</a></p></div></div>`;
+  $('#f').onsubmit=async ev=>{ev.preventDefault();$('#er').textContent='Decrypting…';
+    try{T=await decrypt($('#pw').value);try{sessionStorage.setItem('kgpw',$('#pw').value)}catch(e){}resume()}catch(e){$('#er').textContent='Wrong passphrase.'}};
+}
+function best(id){const a=S.att.filter(x=>x.id===id);return a.length?Math.max(...a.map(x=>x.score)):null}
+function home(){
+  clearInterval(tick);cur=null;
+  app.innerHTML=`<div class="wrap"><div class="row"><h2 style="margin:0">📝 Mock Test Simulator</h2><span class="sp"></span><a href="index.html">← Trainer</a></div>
+  <p class="mute">Timed, exam-style. Real rule: +1 correct, −0.25 wrong, no penalty for skipping. Attempts are saved on this device only.</p>
+  <label class="mute"><input type="checkbox" id="rl" ${real?'checked':''}> Real exam marking (−0.25 for every wrong answer, all sections)</label>
+  <div class="grid" style="margin-top:12px">${T.map(t=>{const b=best(t.id),n=S.att.filter(x=>x.id===t.id).length;return`<div class="card"><b>${esc(t.title)}</b>
+   <div class="mute" style="margin:4px 0">${t.n} Qs · ${t.sections.map(s=>esc(s.name)).join(' · ')}</div>
+   ${t.keyed<t.n?`<div class="bad" style="font-size:13px">Answer key for ${t.n-t.keyed} Qs missing (not scored)</div>`:''}
+   <div class="mute">${n?`Best ${b.toFixed(2)} / ${t.keyed} · ${n} attempt${n>1?'s':''}`:'Not attempted'}</div>
+   <div class="row" style="margin-top:10px"><button class="btn" data-s="${t.id}">Start (120 min)</button>${n?`<button class="btn g" data-r="${t.id}">Review last</button>`:''}</div></div>`}).join('')}</div></div>`;
+  $('#rl').onchange=e=>real=e.target.checked;
+  app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>start(b.dataset.s));
+  app.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>result([...S.att].reverse().find(x=>x.id===b.dataset.r)));
+}
+const tById=id=>T.find(t=>t.id===id);
+function start(id){const t=tById(id);cur={id,real,end:Date.now()+120*60000,ans:{},mark:{},i:0,sec:0};save();run()}
+function save(){S.cur=cur;store.s(S)}
+function resume(){S=store.g();S.att=S.att||[];if(S.cur&&S.cur.end>Date.now()&&tById(S.cur.id)){cur=S.cur;real=cur.real;run()}else{S.cur=null;home()}}
+const secOf=(t,n)=>t.sections.findIndex(s=>n>=s.a&&n<=s.b);
+function run(){
+  const t=tById(cur.id);clearInterval(tick);tick=setInterval(()=>{const r=cur.end-Date.now();if(r<=0){submit();return}const e=$('#tm');if(e){e.textContent=fmt(r);e.classList.toggle('low',r<600000)}},1000);draw()
+}
+const fmt=ms=>{const s=Math.max(0,Math.floor(ms/1000));return[Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,'0')).join(':')};
+function draw(){
+  const t=tById(cur.id),q=t.qs[cur.i],si=secOf(t,q.n),a=cur.ans[q.n]||[];
+  const stN=n=>{const an=(cur.ans[n]||[]).length,m=cur.mark[n];return an&&m?'am':an?'a':m?'m':''};
+  app.innerHTML=`<div class="top"><div class="wrap row"><b>${esc(t.title)}</b><span class="sp"></span><span class="timer" id="tm">${fmt(cur.end-Date.now())}</span><button class="btn g" id="hi">${showHi?'EN only':'EN + हिं'}</button><button class="btn ok" id="sub">Submit</button></div></div>
+  <div class="wrap"><div class="sec">${t.sections.map((s,i)=>`<button class="${i===si?'on':''}" data-g="${s.a}">${esc(s.name)} (${s.a}–${s.b})</button>`).join('')}</div>
+  <div class="lay"><div class="card"><div class="mute">Q${q.n} of ${t.n} · ${esc(q.sec)} · ${q.multi?'select all that apply':'single choice'}</div>
+   <div class="q" style="margin:8px 0">${esc(q.q)}</div>${showHi&&q.qh?`<div class="q hi">${esc(q.qh)}</div>`:''}
+   ${(q.im||[]).map(u=>`<img src="${esc(u)}" alt="figure" loading="lazy">`).join('')}
+   ${q.o.map((o,i)=>`<button class="opt ${a.includes(i)?'sel':''}" data-o="${i}"><b>${L(65+i)}</b><span>${esc(o)}${showHi&&q.oh[i]?`<div class="hi">${esc(q.oh[i])}</div>`:''}</span></button>`).join('')}
+   <div class="row" style="margin-top:10px"><button class="btn g" id="pv" ${cur.i?'':'disabled'}>← Previous</button><button class="btn g" id="cl">Clear</button><button class="btn g" id="mk">${cur.mark[q.n]?'★ Marked':'☆ Mark for review'}</button><span class="sp"></span><button class="btn" id="nx" ${cur.i<t.n-1?'':'disabled'}>Next →</button></div></div>
+  <div class="card"><div class="mute" style="margin-bottom:8px">${Object.values(cur.ans).filter(x=>x.length).length} answered · ${Object.values(cur.mark).filter(Boolean).length} marked</div>
+   <div class="pal">${t.qs.map((x,i)=>`<button class="${stN(x.n)} ${i===cur.i?'c':''}" data-p="${i}">${x.n}</button>`).join('')}</div></div></div></div>`;
+  $('#hi').onclick=()=>{showHi=!showHi;draw()};$('#sub').onclick=()=>{if(confirm('Submit test now?'))submit()};
+  $('#pv').onclick=()=>go(cur.i-1);$('#nx').onclick=()=>go(cur.i+1);
+  $('#cl').onclick=()=>{delete cur.ans[q.n];save();draw()};$('#mk').onclick=()=>{cur.mark[q.n]=!cur.mark[q.n];save();draw()};
+  app.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{const i=+b.dataset.o;let x=cur.ans[q.n]||[];x=q.multi?(x.includes(i)?x.filter(y=>y!==i):[...x,i]):[i];cur.ans[q.n]=x;save();draw()});
+  app.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>go(+b.dataset.p));
+  app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>go(t.qs.findIndex(x=>x.n===+b.dataset.g)));
+}
+function go(i){cur.i=i;save();draw();window.scrollTo(0,0)}
+const same=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
+function mark(t,q,a,rl){
+  if(!q.a.length)return{st:'nokey',m:0};
+  if(!a.length)return{st:'skip',m:0};
+  return same(a,q.a)?{st:'ok',m:q.pos}:{st:'bad',m:-(rl?0.25:q.neg)};
+}
+function submit(){
+  clearInterval(tick);const t=tById(cur.id);let score=0;const res={};
+  t.qs.forEach(q=>{const r=mark(t,q,cur.ans[q.n]||[],cur.real);res[q.n]=r;score+=r.m});
+  const rec={id:cur.id,ts:Date.now(),ans:cur.ans,real:cur.real,score,used:Math.min(120*60000,120*60000-(cur.end-Date.now()))};
+  S.att.push(rec);S.cur=null;cur=null;store.s(S);result(rec);
+}
+function result(rec){
+  const t=tById(rec.id);let c=0,w=0,sk=0,nk=0;const by=t.sections.map(s=>({s,c:0,w:0,sk:0,m:0,max:0}));
+  const res={};
+  t.qs.forEach(q=>{const r=mark(t,q,rec.ans[q.n]||[],rec.real);res[q.n]=r;const b=by[secOf(t,q.n)];
+    if(r.st!=='nokey')b.max+=q.pos;b.m+=r.m;if(r.st==='ok'){c++;b.c++}else if(r.st==='bad'){w++;b.w++}else if(r.st==='skip'){sk++;b.sk++}else nk++});
+  const max=t.qs.reduce((s,q)=>s+(q.a.length?q.pos:0),0);
+  window.__r={t,rec,res};let f='all';
+  const view=()=>{const list=t.qs.filter(q=>f==='all'||res[q.n].st===f);
+   $('#rv').innerHTML=list.map(q=>{const a=rec.ans[q.n]||[],r=res[q.n];return`<div class="card"><div class="mute">Q${q.n} · ${esc(q.sec)} · <b class="${r.st==='ok'?'ok':r.st==='bad'?'bad':''}">${{ok:'Correct',bad:'Wrong',skip:'Skipped',nokey:'No key'}[r.st]} (${r.m>0?'+':''}${r.m})</b></div>
+    <div class="q" style="margin:6px 0">${esc(q.q)}</div>${(q.im||[]).map(u=>`<img src="${esc(u)}" style="max-width:100%">`).join('')}
+    ${q.o.map((o,i)=>`<div class="opt ${q.a.includes(i)?'right':a.includes(i)?'wrong':''}"><b>${L(65+i)}</b><span>${esc(o)}${q.oh[i]?`<div class="hi">${esc(q.oh[i])}</div>`:''}${a.includes(i)?' <i class="mute">(your answer)</i>':''}</span></div>`).join('')}
+    ${q.e?`<div class="expl">${esc(q.e)}</div>`:''}</div>`}).join('')||'<p class="mute">None.</p>'};
+  app.innerHTML=`<div class="wrap"><div class="row"><h2 style="margin:0">Result · ${esc(t.title)}</h2><span class="sp"></span><button class="btn g" id="hm">← All tests</button></div>
+  <div class="card"><div class="stats"><div class="stat"><b>${rec.score.toFixed(2)} / ${max}</b>Score</div><div class="stat"><b class="ok">${c}</b>Correct</div><div class="stat"><b class="bad">${w}</b>Wrong</div><div class="stat"><b>${sk}</b>Skipped</div><div class="stat"><b>${Math.round(rec.used/60000)} min</b>Time</div></div>
+  ${nk?`<p class="mute">${nk} questions have no answer key and aren't scored.</p>`:''}
+  <table style="width:100%;margin-top:10px;border-collapse:collapse">${by.map(b=>`<tr><td style="padding:4px 0">${esc(b.s.name)}</td><td>✔ ${b.c}</td><td>✘ ${b.w}</td><td>– ${b.sk}</td><td align="right"><b>${b.m.toFixed(2)}</b> / ${b.max}</td></tr>`).join('')}</table></div>
+  <div class="sec">${[['all','All'],['bad','Wrong'],['skip','Skipped'],['ok','Correct']].map(([k,n])=>`<button data-f="${k}" class="${k==='all'?'on':''}">${n}</button>`).join('')}</div><div id="rv"></div></div>`;
+  $('#hm').onclick=home;view();
+  app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{f=b.dataset.f;app.querySelectorAll('[data-f]').forEach(x=>x.classList.toggle('on',x===b));view()});
+  window.scrollTo(0,0);
+}
+window.addEventListener('beforeunload',e=>{if(cur){e.preventDefault();e.returnValue=''}});
+(async()=>{let p=null;try{p=sessionStorage.getItem('kgpw')}catch(e){}
+  if(p){try{T=await decrypt(p);return resume()}catch(e){}}lock()})();
+</script></body></html>

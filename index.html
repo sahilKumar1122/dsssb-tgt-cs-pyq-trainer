@@ -222,7 +222,7 @@ function sidebar(){
   const st=SUBJ.flatMap((_,i)=>allQ(i));
   const bm=st.filter(x=>S.bm[x.id]).length,miss=st.filter(x=>S.att[x.id]&&!S.att[x.id].ok).length,nw=allQ(cur).filter(x=>!S.att[x.id]).length;
   const it=(m,label,c)=>`<div class="item ${V.m===m?'on':''}" onclick="go({m:'${m}'})"><span>${label}</span><span class="c">${c}</span></div>`;
-  $('#smart').innerHTML=it('all','🗂 All subjects','')+it('dash','📊 Dashboard','')+it('pri','🎯 What to study first','')+it('syl','📋 Official syllabus map','')+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('bm','⭐ Bookmarked',bm);
+  $('#smart').innerHTML=it('all','🗂 All subjects','')+it('dash','📊 Dashboard','')+it('pri','🎯 What to study first','')+it('syl','📋 Official syllabus map','')+'<div class="item" onclick="location.href=\'tests.html\'"><span>📝 Mock tests (private)</span><span class="c"></span></div>'+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('bm','⭐ Bookmarked',bm);
   let h='',last='';const sj=SUBJ[cur];
   h+=`<div class="item ${V.m==='topic'&&V.t<0?'on':''}" onclick="go({m:'topic',t:-1})"><span>All topics</span><span class="c">${allQ(cur).filter(x=>S.att[x.id]).length}/${allQ(cur).length}</span></div>`;
   sj.topics.forEach((t,i)=>{
