@@ -405,7 +405,7 @@ function render(){setTimeout(fsSync,0);
   if(t)h+=`<details class="theory" ${V.focus?'':'open'}><summary>Must-know theory</summary>${theoryHtml(t.theory)}</details>`+(t.deep?`<details class="theory deep"><summary>📚 Deep revision notes — concepts beyond the PYQs</summary>${theoryHtml(t.deep)}</details>`:'');
   if(!L.length)h+=`<div class="empty">Nothing here yet.</div>`;
   else if(V.focus){V.i=Math.min(V.i,L.length-1);const x=L[V.i];
-    h+=`<div class="bar" style="margin-bottom:10px"><i style="width:${Math.round((V.i+1)/L.length*100)}%"></i></div><div class="sub">Question ${V.i+1} of ${L.length} · keys: A–D answer, ← → move</div>`+qhtml(x)+
+    h+=`<div class="bar" style="margin-bottom:10px"><i style="width:${Math.round((V.i+1)/L.length*100)}%"></i></div><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div class="sub">Question ${V.i+1} of ${L.length} · keys: A–D answer, ← → move</div><div class="row"><button ${V.i?'':'disabled'} onclick="V.i--;render();window.scrollTo(0,0)">← Prev</button><button class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div></div>`+qhtml(x)+
     `<div class="row"><button ${V.i?'':'disabled'} onclick="V.i--;render()">← Prev</button><button id="nextBtn" class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div>`}
   else{const sec=(cls,label,arr)=>{if(!arr.length)return '';const d=arr.filter(x=>S.att[x.id]).length;return `<div class="sec ${cls}">${label}<small>${d}/${arr.length} done</small><div class="bar"><i style="width:${arr.length?d/arr.length*100:0}%"></i></div></div>`+arr.map(qhtml).join('')};
     const A=L.filter(x=>!isP(x.q)),B=L.filter(x=>isP(x.q));
