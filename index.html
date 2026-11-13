@@ -267,6 +267,9 @@ function allPage(){
   const maps=SUBJ.map((sj,i)=>`<div class="tmap"><h4><span>${icon(sj.subject)} ${esc(sj.subject)}</span></h4><div class="chips">${sj.topics.map((t,ti)=>{const d=t.qs.filter(q=>S.att[sid(i,q.n)]).length,p=t.qs.length?Math.round(d/t.qs.length*100):0;const pb=PT[sj.slug+'|'+t.title];
     return `<span class="chp" style="--p:${p}%" title="${esc(t.title)} — ${d}/${t.qs.length}" onclick="go({m:'topic',t:${ti},si:${i}})">${pb?TB[pb.tier][0]+' ':''}${esc(t.title.replace(/^\d+\.\s*/,'').slice(0,34))} · ${p}%</span>`}).join('')}</div></div>`).join('');
   $('#view').innerHTML=`<h2>🗂 All subjects</h2><p class="sub">Every subject and topic at a glance. Click a card to open it, or any topic chip to jump straight in.</p>
+  ${(()=>{const all=SUBJ.flatMap((_,i)=>allQ(i)),rvN=all.filter(x=>S.rv[x.id]).length,bothN=all.filter(x=>S.att[x.id]&&S.rv[x.id]).length,n=all.length,pc=v=>n?(v/n*100).toFixed(1):0;
+   const c=(t,v,col,sub)=>`<div class="card"><h3>${t}</h3><div class="big">${v}<span style="font-size:15px;font-weight:500;color:var(--mute)"> / ${n}</span></div><div class="bar"><i style="width:${pc(v)}%;background:${col}"></i></div><div class="sub">${pc(v)}% ${sub}</div></div>`;
+   return `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));margin-bottom:12px">${c('✅ Done (answered)',tD,'var(--acc)','of all questions')}${c('✔ Revised',rvN,'var(--ok)','of all questions')}${c('⏳ Left to do',n-tD,'#f59e0b',`· ${n-rvN} still to revise`)}</div>`})()}
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">
    <div class="card"><h3>Overall</h3><div class="big">${tN?(tD/tN*100).toFixed(1):0}%</div><div class="sub">${tD} of ${tN} questions</div></div>
    <div class="card"><h3>Exam-weighted coverage</h3><div class="big">${wTot?(wDone/wTot*100).toFixed(1):0}%</div><div class="sub">progress counted by topic importance</div></div>
