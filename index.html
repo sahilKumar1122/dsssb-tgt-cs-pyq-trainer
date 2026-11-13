@@ -100,6 +100,10 @@ h2{margin:0 0 4px;font-size:22px}
 .tg input:checked+i{background:var(--ok)}.tg input:checked+i:after{left:16px}
 .tg:has(input:checked){border-color:var(--ok);background:var(--okbg)}
 .tg.dis{opacity:.45;pointer-events:none}
+.fsform{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mute)}.fsform input{width:62px;padding:5px 7px;border:1px solid var(--line);border-radius:8px;font:inherit}
+#fsbar{display:none;position:fixed;top:0;left:0;right:0;z-index:60;background:#1c2030;color:#fff;align-items:center;justify-content:center;gap:18px;padding:8px 14px;font-size:14px}#fsbar b{font-variant-numeric:tabular-nums;font-size:18px}#fsbar b.low{color:#fca5a5}#fsbar button{background:#374151;color:#fff;border:0;border-radius:8px;padding:4px 12px}
+body.fs #fsbar{display:flex}body.fs header,body.fs aside{display:none}body.fs .app{display:block}body.fs main{padding-top:56px;max-width:900px;margin:0 auto}
+#fsres{position:fixed;inset:0;background:rgba(15,20,35,.55);z-index:70;display:flex;align-items:center;justify-content:center}#fsres>div{background:#fff;border-radius:16px;padding:24px 28px;max-width:380px;text-align:center}#fsres h2{margin-top:0}
 .rvb{font-size:12px;padding:2px 9px;margin-right:6px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--mute)}.rvb.on{background:var(--okbg);border-color:var(--ok);color:var(--ok);font-weight:600}.q.rvd{background:#f7fcf9}.q.pyq.rvd,.q.prac.rvd{border-left-color:var(--ok)}
 .q.pyq{border-left:4px solid var(--acc)}.q.prac{border-left:4px solid #0d9488}
 .bdg{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;margin-right:6px}
@@ -150,7 +154,7 @@ h2{margin:0 0 4px;font-size:22px}
   <div class="nav" id="smart"></div>
   <div id="topics"></div>
 </aside>
-<main id="view"></main>
+<main id="view"></main><div id="fsbar"></div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
@@ -225,12 +229,12 @@ function sidebar(){
   const it=(m,label,c)=>`<div class="item ${V.m===m?'on':''}" onclick="go({m:'${m}'})"><span>${label}</span><span class="c">${c}</span></div>`;
   $('#smart').innerHTML=it('all','🗂 All subjects','')+it('dash','📊 Dashboard','')+it('pri','🎯 What to study first','')+it('syl','📋 Official syllabus map','')+'<div class="item" onclick="location.href=\'tests.html\'"><span>📝 Mock tests (private)</span><span class="c"></span></div>'+it('new','🆕 Unattempted (this subject)',nw)+it('miss','❌ My mistakes',miss)+it('unrv','📖 Not revised yet (this subject)',unrvN)+it('rv','✔ Revised',rvN)+it('bm','⭐ Bookmarked',bm);
   let h='',last='';const sj=SUBJ[cur];
-  h+=`<div class="item ${V.m==='topic'&&V.t<0?'on':''}" onclick="go({m:'topic',t:-1})"><span>All topics</span><span class="c">${allQ(cur).filter(x=>S.att[x.id]).length}/${allQ(cur).length}</span></div>`;
+  h+=`<div class="item ${V.m==='topic'&&V.t<0?'on':''}" onclick="go({m:'topic',t:-1})"><span>All topics</span><span class="c" title="attempted/total · revised">${allQ(cur).filter(x=>S.att[x.id]).length}/${allQ(cur).length} · ✔${allQ(cur).filter(x=>S.rv[x.id]).length}</span></div>`;
   sj.topics.forEach((t,i)=>{
     if(t.unit!==last){h+=`<div class="unit">${esc(t.unit)}</div>`;last=t.unit}
     const A=t.qs.filter(q=>!isP(q)),B=t.qs.filter(isP);const dA=A.filter(q=>S.att[sid(cur,q.n)]).length,dB=B.filter(q=>S.att[sid(cur,q.n)]).length;
     const pA=A.length?dA/A.length*100:0,pB=B.length?dB/B.length*100:0;
-    h+=`<div class="item ${V.m==='topic'&&V.t===i?'on':''}" onclick="go({m:'topic',t:${i}})"><span>${prBadge(cur,t.title)}${esc(t.title)}</span><span class="c" title="PYQ done/total · Practice done/total">📄${dA}/${A.length} · ✍️${dB}/${B.length}</span></div><div class="sb2"><div class="bar ok"><i style="width:${pA}%"></i></div><div class="bar t"><i style="width:${pB}%"></i></div></div>`;
+    h+=`<div class="item ${V.m==='topic'&&V.t===i?'on':''}" onclick="go({m:'topic',t:${i}})"><span>${prBadge(cur,t.title)}${esc(t.title)}</span><span class="c" title="PYQ done/total · Practice done/total · Revised/total">📄${dA}/${A.length} · ✍️${dB}/${B.length} · ✔${t.qs.filter(q=>S.rv[sid(cur,q.n)]).length}/${t.qs.length}</span></div><div class="sb2"><div class="bar ok"><i style="width:${pA}%"></i></div><div class="bar t"><i style="width:${pB}%"></i></div></div>`;
   });
   $('#topics').innerHTML=h;
 }
@@ -255,7 +259,8 @@ function allPage(){
       <div class="top"><span class="ic">${icon(sj.subject)}</span><div style="min-width:0;padding-right:62px"><h4>${esc(sj.subject)}</h4><div class="meta">${sj.topics.length} topics · ${L.length} questions${pr?` · ${pr.share}% weight`:''}</div></div></div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:10px"><div style="flex:1">
         <div class="ln"><span>📄 Past papers</span><b>${dA}/${A.length}</b></div><div class="bar"><i style="width:${A.length?dA/A.length*100:0}%"></i></div>
-        <div class="ln"><span>✍️ Practice</span><b>${dB}/${B.length}</b></div><div class="bar t"><i style="width:${B.length?dB/B.length*100:0}%"></i></div></div>
+        <div class="ln"><span>✍️ Practice</span><b>${dB}/${B.length}</b></div><div class="bar t"><i style="width:${B.length?dB/B.length*100:0}%"></i></div>
+        <div class="ln"><span>✔ Revised</span><b>${L.filter(x=>S.rv[x.id]).length}/${L.length}</b></div><div class="bar ok"><i style="width:${L.length?L.filter(x=>S.rv[x.id]).length/L.length*100:0}%"></i></div></div>
         <div class="ring" style="--p:${pct}"><div>${pct}%</div></div></div>
       <div class="ln" style="margin-top:10px"><span>Accuracy</span><b>${a.length?Math.round(ok/a.length*100)+'%':'—'}</b></div>
       <div class="nx">${nxt?`▶ <b>Next:</b> ${esc(nxt.t.title)} <span style="color:var(--mute)">(${nxt.d}/${nxt.t.qs.length})</span>`:'✅ Subject complete'}</div></div>`}).join('');
@@ -346,6 +351,19 @@ function rv(id){if(S.rv[id])delete S.rv[id];else S.rv[id]=1;save();const x=findQ
 function bm(id){if(S.bm[id])delete S.bm[id];else S.bm[id]=1;save();const x=findQ(id),el=document.getElementById('q_'+id);
   if(el){const o=el.classList.contains('show');el.outerHTML=qhtml(x);if(o)document.getElementById('q_'+id).classList.add('show')}sidebar();checkBadges();}
 
+let FS=null,fsT=null;try{FS=JSON.parse(localStorage.getItem('kgpyq_fs'))}catch(e){}
+const fsDone=()=>FS.ids.filter(id=>S.att[id]&&S.att[id].t>=FS.start).length;
+const fsFmt=ms=>{const s=Math.max(0,Math.floor(ms/1000));return[Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,'0')).join(':')};
+function fsStart(){const n=Math.max(1,+$('#fsN').value||100),m=Math.max(1,+$('#fsM').value||120),base=listFor(),pick=a=>a.slice().sort(()=>Math.random()-.5);
+  const pool=pick(base.filter(x=>!S.att[x.id])).concat(pick(base.filter(x=>S.att[x.id]))).slice(0,n);if(!pool.length)return;
+  FS={start:Date.now(),end:Date.now()+m*60000,ids:pool.map(x=>x.id)};try{localStorage.setItem('kgpyq_fs',JSON.stringify(FS))}catch(e){}
+  V.list=pool;V.m='prac';V.focus=true;V.i=0;fsRun();document.documentElement.requestFullscreen?.().catch(()=>{});render();window.scrollTo(0,0)}
+function fsRun(){document.body.classList.add('fs');clearInterval(fsT);fsT=setInterval(fsTick,1000);fsTick()}
+function fsTick(){if(!FS)return;const r=FS.end-Date.now();if(r<=0)return fsEnd();
+  $('#fsbar').innerHTML=`⏱ <b class="${r<300000?'low':''}">${fsFmt(r)}</b><span>✔ ${fsDone()}/${FS.ids.length} answered</span><button onclick="if(confirm('End session now?'))fsEnd()">End</button>`}
+function fsEnd(){clearInterval(fsT);const ids=FS.ids.filter(id=>S.att[id]&&S.att[id].t>=FS.start),ok=ids.filter(id=>S.att[id].ok).length,used=Math.min(Date.now(),FS.end)-FS.start,n=FS.ids.length;
+  FS=null;try{localStorage.removeItem('kgpyq_fs')}catch(e){}document.body.classList.remove('fs');if(document.fullscreenElement)document.exitFullscreen?.();
+  const d=document.createElement('div');d.id='fsres';d.innerHTML=`<div><h2>Session done 🎯</h2><p><b>${ids.length}/${n}</b> answered · <b>${ids.length?Math.round(ok/ids.length*100):0}%</b> correct<br>Time: <b>${fsFmt(used)}</b>${ids.length?` · ${Math.round(used/60000/ids.length*10)/10} min/question`:''}</p><button class="pri" onclick="this.closest('#fsres').remove()">Close</button></div>`;document.body.appendChild(d);render()}
 function go(o){V=Object.assign({m:'dash',t:-1,focus:false,i:0,list:null},o);if(o.si!==undefined){cur=o.si}render();window.scrollTo(0,0)}
 function startPractice(n,src){const base=listFor(src);const L=base.filter(x=>!S.att[x.id]);const pool=(L.length?L:base).slice().sort(()=>Math.random()-.5).slice(0,n);
   V.list=pool;V.m='prac';V.focus=true;V.i=0;render();window.scrollTo(0,0)}
@@ -365,6 +383,7 @@ function render(){
     <button onclick="V.focus=!V.focus;V.i=0;render()">${V.focus?'📃 Show full list':'🔍 One at a time'}</button>
     <button onclick="window.print()">🖨 Print / PDF</button>
   </div>
+  <div class="row noprint fsform" style="margin-bottom:12px">⏱ <b style="color:var(--ink)">Focus session</b> <input id="fsN" type="number" min="1" value="100"> questions in <input id="fsM" type="number" min="1" value="120"> min <button class="pri" onclick="fsStart()">Start (fullscreen)</button></div>
   <div class="row noprint" style="margin-bottom:12px">
     <div class="sg">${[['all','All',cAll,''],['pyq','📄 Past papers',cP,''],['prac','✍️ Practice',cR,'p']].map(([k,l,c,cls])=>`<button class="${SRC===k?'on '+cls:''}" onclick="setSrc('${k}')">${l}<span>${c}</span></button>`).join('')}</div>
   </div>
@@ -455,6 +474,7 @@ async function load(){
   render();
 }
 $('#search').oninput=()=>{if(V.m==='dash')V.m='topic';render()};
+if(FS&&FS.end>Date.now())fsRun();else if(FS){FS=null;try{localStorage.removeItem('kgpyq_fs')}catch(e){}}
 load();
 </script>
 </body>
