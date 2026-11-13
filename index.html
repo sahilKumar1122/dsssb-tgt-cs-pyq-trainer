@@ -100,6 +100,7 @@ h2{margin:0 0 4px;font-size:22px}
 .tg input:checked+i{background:var(--ok)}.tg input:checked+i:after{left:16px}
 .tg:has(input:checked){border-color:var(--ok);background:var(--okbg)}
 .tg.dis{opacity:.45;pointer-events:none}
+.fsc{background:linear-gradient(135deg,#eef0ff,#f7f8ff);border:1px solid #dfe3ff;border-radius:14px;padding:14px 16px;margin-bottom:12px}.fsc h3{margin:0 0 10px;font-size:15px}.fsc .r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:13px;color:var(--mute)}.fsc .r b{min-width:76px;color:var(--ink)}.fsc .pl{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;font:inherit;font-size:13px}.fsc .pl.on{background:var(--acc);color:#fff;border-color:var(--acc)}.fsc input[type=number]{width:70px;padding:5px 7px;border:1px solid var(--line);border-radius:8px;font:inherit}.fsc .go{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px}
 .fsform{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mute)}.fsform input{width:62px;padding:5px 7px;border:1px solid var(--line);border-radius:8px;font:inherit}
 #fsbar{display:none;position:fixed;top:0;left:0;right:0;z-index:60;background:#1c2030;color:#fff;align-items:center;justify-content:center;gap:18px;padding:8px 14px;font-size:14px}#fsbar b{font-variant-numeric:tabular-nums;font-size:18px}#fsbar b.low{color:#fca5a5}#fsbar button{background:#374151;color:#fff;border:0;border-radius:8px;padding:4px 12px}
 body.fs #fsbar{display:flex}body.fs header,body.fs aside{display:none}body.fs .app{display:block}body.fs main{padding-top:56px;max-width:900px;margin:0 auto}
@@ -145,7 +146,7 @@ body.fs #fsbar{display:flex}body.fs header,body.fs aside{display:none}body.fs .a
   <label class="tg" title="Show all answers to skim and revise"><input type="checkbox" id="hRev" onchange="setRev(this.checked)"><i></i>Revise</label>
   <div class="lvl" id="hLvl"></div>
   <div style="flex:1"></div>
-  <button onclick="go({m:'all'})">🗂 All subjects</button><button onclick="go({m:'pri'})">🎯 Priority</button><button onclick="go({m:'dash'})">📊 Dashboard</button>
+  <button onclick="go({m:'all'})">🗂 All subjects</button><button onclick="go({m:'pri'})">🎯 Priority</button><button onclick="go({m:'dash'})">📊 Dashboard</button><button onclick="fsToggle()" title="Toggle fullscreen">⛶ Fullscreen</button>
 </header>
 <div class="app">
 <aside>
@@ -358,20 +359,23 @@ function bm(id){if(S.bm[id])delete S.bm[id];else S.bm[id]=1;save();const x=findQ
 let FS=null,fsT=null;try{FS=JSON.parse(localStorage.getItem('kgpyq_fs'))}catch(e){}
 const fsDone=()=>FS.ids.filter(id=>S.att[id]&&S.att[id].t>=FS.start).length;
 const fsFmt=ms=>{const s=Math.max(0,Math.floor(ms/1000));return[Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,'0')).join(':')};
+function fsPre(k,v){$('#fs'+k).value=v;fsSync()}
+function fsSync(){const n=+$('#fsN').value||0,m=+$('#fsM').value||0;document.querySelectorAll('.fsc [data-n]').forEach(b=>b.classList.toggle('on',+b.dataset.n===n));document.querySelectorAll('.fsc [data-m]').forEach(b=>b.classList.toggle('on',+b.dataset.m===m));const e=$('#fsPer');if(e)e.textContent=n&&m?`≈ ${(m*60/n).toFixed(0)}s per question`:''}
+function fsToggle(){if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{})}
 function fsStart(){const n=Math.max(1,+$('#fsN').value||100),m=Math.max(1,+$('#fsM').value||120),base=listFor(),pick=a=>a.slice().sort(()=>Math.random()-.5);
   const pool=pick(base.filter(x=>!S.att[x.id])).concat(pick(base.filter(x=>S.att[x.id]))).slice(0,n);if(!pool.length)return;
   FS={start:Date.now(),end:Date.now()+m*60000,ids:pool.map(x=>x.id)};try{localStorage.setItem('kgpyq_fs',JSON.stringify(FS))}catch(e){}
-  V.list=pool;V.m='prac';V.focus=true;V.i=0;fsRun();document.documentElement.requestFullscreen?.().catch(()=>{});render();window.scrollTo(0,0)}
+  V.list=pool;V.m='prac';V.focus=true;V.i=0;fsRun();if($('#fsFull')?.checked&&!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});render();window.scrollTo(0,0)}
 function fsRun(){document.body.classList.add('fs');clearInterval(fsT);fsT=setInterval(fsTick,1000);fsTick()}
 function fsTick(){if(!FS)return;const r=FS.end-Date.now();if(r<=0)return fsEnd();
   $('#fsbar').innerHTML=`⏱ <b class="${r<300000?'low':''}">${fsFmt(r)}</b><span>✔ ${fsDone()}/${FS.ids.length} answered</span><button onclick="if(confirm('End session now?'))fsEnd()">End</button>`}
 function fsEnd(){clearInterval(fsT);const ids=FS.ids.filter(id=>S.att[id]&&S.att[id].t>=FS.start),ok=ids.filter(id=>S.att[id].ok).length,used=Math.min(Date.now(),FS.end)-FS.start,n=FS.ids.length;
-  FS=null;try{localStorage.removeItem('kgpyq_fs')}catch(e){}document.body.classList.remove('fs');if(document.fullscreenElement)document.exitFullscreen?.();
+  FS=null;try{localStorage.removeItem('kgpyq_fs')}catch(e){}document.body.classList.remove('fs');
   const d=document.createElement('div');d.id='fsres';d.innerHTML=`<div><h2>Session done 🎯</h2><p><b>${ids.length}/${n}</b> answered · <b>${ids.length?Math.round(ok/ids.length*100):0}%</b> correct<br>Time: <b>${fsFmt(used)}</b>${ids.length?` · ${Math.round(used/60000/ids.length*10)/10} min/question`:''}</p><button class="pri" onclick="this.closest('#fsres').remove()">Close</button></div>`;document.body.appendChild(d);render()}
 function go(o){V=Object.assign({m:'dash',t:-1,focus:false,i:0,list:null},o);if(o.si!==undefined){cur=o.si}render();window.scrollTo(0,0)}
 function startPractice(n,src){const base=listFor(src);const L=base.filter(x=>!S.att[x.id]);const pool=(L.length?L:base).slice().sort(()=>Math.random()-.5).slice(0,n);
   V.list=pool;V.m='prac';V.focus=true;V.i=0;render();window.scrollTo(0,0)}
-function render(){
+function render(){setTimeout(fsSync,0);
   header();sidebar();ddRender();
   if(V.m==='dash')return dash();
   if(V.m==='pri')return priPage();
@@ -387,7 +391,10 @@ function render(){
     <button onclick="V.focus=!V.focus;V.i=0;render()">${V.focus?'📃 Show full list':'🔍 One at a time'}</button>
     <button onclick="window.print()">🖨 Print / PDF</button>
   </div>
-  <div class="row noprint fsform" style="margin-bottom:12px">⏱ <b style="color:var(--ink)">Focus session</b> <input id="fsN" type="number" min="1" value="100"> questions in <input id="fsM" type="number" min="1" value="120"> min <button class="pri" onclick="fsStart()">Start (fullscreen)</button></div>
+  <div class="fsc noprint"><h3>⏱ Focus session</h3>
+   <div class="r"><b>Questions</b>${[25,50,100,200].map(v=>`<button class="pl" data-n="${v}" onclick="fsPre('N',${v})">${v}</button>`).join('')}<input id="fsN" type="number" min="1" value="100" oninput="fsSync()"></div>
+   <div class="r"><b>Time</b>${[30,60,90,120].map(v=>`<button class="pl" data-m="${v}" onclick="fsPre('M',${v})">${v}m</button>`).join('')}<input id="fsM" type="number" min="1" value="120" oninput="fsSync()"> <span id="fsPer"></span></div>
+   <div class="go"><button class="pri" onclick="fsStart()">▶ Start session</button><label style="font-size:13px;color:var(--mute);display:flex;gap:6px;align-items:center"><input type="checkbox" id="fsFull" checked> Go fullscreen</label></div></div>
   <div class="row noprint" style="margin-bottom:12px">
     <div class="sg">${[['all','All',cAll,''],['pyq','📄 Past papers',cP,''],['prac','✍️ Practice',cR,'p']].map(([k,l,c,cls])=>`<button class="${SRC===k?'on '+cls:''}" onclick="setSrc('${k}')">${l}<span>${c}</span></button>`).join('')}</div>
   </div>
