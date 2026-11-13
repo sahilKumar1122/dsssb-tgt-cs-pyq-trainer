@@ -269,7 +269,8 @@ function allPage(){
   $('#view').innerHTML=`<h2>🗂 All subjects</h2><p class="sub">Every subject and topic at a glance. Click a card to open it, or any topic chip to jump straight in.</p>
   ${(()=>{const all=SUBJ.flatMap((_,i)=>allQ(i)),rvN=all.filter(x=>S.rv[x.id]).length,bothN=all.filter(x=>S.att[x.id]&&S.rv[x.id]).length,n=all.length,pc=v=>n?(v/n*100).toFixed(1):0;
    const c=(t,v,col,sub)=>`<div class="card"><h3>${t}</h3><div class="big">${v}<span style="font-size:15px;font-weight:500;color:var(--mute)"> / ${n}</span></div><div class="bar"><i style="width:${pc(v)}%;background:${col}"></i></div><div class="sub">${pc(v)}% ${sub}</div></div>`;
-   return `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));margin-bottom:12px">${c('✅ Done (answered)',tD,'var(--acc)','of all questions')}${c('✔ Revised',rvN,'var(--ok)','of all questions')}${c('⏳ Left to do',n-tD,'#f59e0b',`· ${n-rvN} still to revise`)}</div>`})()}
+   return `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));margin-bottom:12px">${c('✅ Done (answered)',tD,'var(--acc)','of all questions')}${c('✔ Revised',rvN,'var(--ok)','of all questions')}${c('⏳ Left to do',n-tD,'#f59e0b',`· ${n-rvN} still to revise`)}</div>
+   <div class="card" style="margin-bottom:12px"><h3>📅 Today</h3><div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end"><div><div class="big">${S.days[today()]?.n||0}<span style="font-size:15px;font-weight:500;color:var(--mute)"> / ${S.goal} goal</span></div><div class="sub">answered today</div></div><div><div class="big">${S.days[today()]?.ok||0}</div><div class="sub">correct today</div></div><div><div class="big">${all.filter(x=>S.rv[x.id]===today()).length}</div><div class="sub">revised today</div></div></div><div class="bar"><i style="width:${Math.min(100,((S.days[today()]?.n||0)/S.goal*100)).toFixed(0)}%;background:var(--acc)"></i></div></div>`})()}
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">
    <div class="card"><h3>Overall</h3><div class="big">${tN?(tD/tN*100).toFixed(1):0}%</div><div class="sub">${tD} of ${tN} questions</div></div>
    <div class="card"><h3>Exam-weighted coverage</h3><div class="big">${wTot?(wDone/wTot*100).toFixed(1):0}%</div><div class="sub">progress counted by topic importance</div></div>
@@ -349,7 +350,7 @@ function pick(id,k){
   const el=document.getElementById('q_'+id);if(el)el.outerHTML=qhtml(x);
   document.getElementById('nextBtn')?.focus();
 }
-function rv(id){if(S.rv[id])delete S.rv[id];else S.rv[id]=1;save();const x=findQ(id),el=document.getElementById('q_'+id);
+function rv(id){if(S.rv[id])delete S.rv[id];else S.rv[id]=today();save();const x=findQ(id),el=document.getElementById('q_'+id);
   if(el){const o=el.classList.contains('show');el.outerHTML=qhtml(x);if(o)document.getElementById('q_'+id).classList.add('show')}sidebar();}
 function bm(id){if(S.bm[id])delete S.bm[id];else S.bm[id]=1;save();const x=findQ(id),el=document.getElementById('q_'+id);
   if(el){const o=el.classList.contains('show');el.outerHTML=qhtml(x);if(o)document.getElementById('q_'+id).classList.add('show')}sidebar();checkBadges();}
