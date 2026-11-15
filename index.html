@@ -104,6 +104,8 @@ h2{margin:0 0 4px;font-size:22px}
 .fsform{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mute)}.fsform input{width:62px;padding:5px 7px;border:1px solid var(--line);border-radius:8px;font:inherit}
 #fsbar{display:none;position:fixed;top:0;left:0;right:0;z-index:60;background:#1c2030;color:#fff;align-items:center;justify-content:center;gap:18px;padding:8px 14px;font-size:14px}#fsbar b{font-variant-numeric:tabular-nums;font-size:18px}#fsbar b.low{color:#fca5a5}#fsbar button{background:#374151;color:#fff;border:0;border-radius:8px;padding:4px 12px}
 body.fs #fsbar{display:flex}body.fs header,body.fs aside{display:none}body.fs .app{display:block}body.fs main{padding-top:56px;max-width:900px;margin:0 auto}
+body.zen.zq header,body.zen.zq aside{display:none}body.zen.zq .app{display:block}body.zen.zq main{max-width:860px;margin:0 auto;padding-top:20px}body.zen.fs.zq main{padding-top:64px}body.zen.zq #view>:not(.bar):not(.zk):not(.q){display:none}
+#zbtn{display:none;position:fixed;right:14px;bottom:14px;z-index:65;background:#1c2030;color:#fff;border:0;border-radius:999px;padding:8px 14px;opacity:.75;cursor:pointer}#zbtn:hover{opacity:1}body.zen.zq #zbtn{display:block}
 #fsres{position:fixed;inset:0;background:rgba(15,20,35,.55);z-index:70;display:flex;align-items:center;justify-content:center}#fsres>div{background:#fff;border-radius:16px;padding:24px 28px;max-width:380px;text-align:center}#fsres h2{margin-top:0}
 .rvb{font-size:12px;padding:2px 9px;margin-right:6px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--mute)}.rvb.on{background:var(--okbg);border-color:var(--ok);color:var(--ok);font-weight:600}.q.rvd{background:#f7fcf9}.q.pyq.rvd,.q.prac.rvd{border-left-color:var(--ok)}
 .q.pyq{border-left:4px solid var(--acc)}.q.prac{border-left:4px solid #0d9488}
@@ -146,7 +148,7 @@ body.fs #fsbar{display:flex}body.fs header,body.fs aside{display:none}body.fs .a
   <label class="tg" title="Show all answers to skim and revise"><input type="checkbox" id="hRev" onchange="setRev(this.checked)"><i></i>Revise</label>
   <div class="lvl" id="hLvl"></div>
   <div style="flex:1"></div>
-  <button onclick="go({m:'all'})">🗂 All subjects</button><button onclick="go({m:'pri'})">🎯 Priority</button><button onclick="go({m:'dash'})">📊 Dashboard</button><button onclick="fsToggle()" title="Toggle fullscreen">⛶ Fullscreen</button>
+  <button onclick="go({m:'all'})">🗂 All subjects</button><button onclick="go({m:'pri'})">🎯 Priority</button><button onclick="go({m:'dash'})">📊 Dashboard</button><button onclick="zToggle()" title="Hide panels, show only the question (one-at-a-time mode)">◧ Focus view</button><button onclick="fsToggle()" title="Toggle fullscreen">⛶ Fullscreen</button>
 </header>
 <div class="app">
 <aside>
@@ -155,7 +157,7 @@ body.fs #fsbar{display:flex}body.fs header,body.fs aside{display:none}body.fs .a
   <div class="nav" id="smart"></div>
   <div id="topics"></div>
 </aside>
-<main id="view"></main><div id="fsbar"></div>
+<main id="view"></main><div id="fsbar"></div><button id="zbtn" onclick="zToggle()">☰ Show panels</button>
 </div>
 <div class="toast" id="toast"></div>
 <script>
@@ -359,6 +361,8 @@ function bm(id){if(S.bm[id])delete S.bm[id];else S.bm[id]=1;save();const x=findQ
 let FS=null,fsT=null;try{FS=JSON.parse(localStorage.getItem('kgpyq_fs'))}catch(e){}
 const fsDone=()=>FS.ids.filter(id=>S.att[id]&&S.att[id].t>=FS.start).length;
 const fsFmt=ms=>{const s=Math.max(0,Math.floor(ms/1000));return[Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(x=>String(x).padStart(2,'0')).join(':')};
+function zToggle(){document.body.classList.toggle('zen');try{localStorage.setItem('kgpyq_zen',document.body.classList.contains('zen')?1:'')}catch(e){}}
+document.addEventListener('fullscreenchange',()=>document.body.classList.toggle('zen',!!document.fullscreenElement));
 function fsPre(k,v){$('#fs'+k).value=v;fsSync()}
 function fsSync(){const n=+$('#fsN').value||0,m=+$('#fsM').value||0;document.querySelectorAll('.fsc [data-n]').forEach(b=>b.classList.toggle('on',+b.dataset.n===n));document.querySelectorAll('.fsc [data-m]').forEach(b=>b.classList.toggle('on',+b.dataset.m===m));const e=$('#fsPer');if(e)e.textContent=n&&m?`≈ ${(m*60/n).toFixed(0)}s per question`:''}
 function fsToggle(){if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{})}
@@ -375,7 +379,7 @@ function fsEnd(){clearInterval(fsT);const ids=FS.ids.filter(id=>S.att[id]&&S.att
 function go(o){V=Object.assign({m:'dash',t:-1,focus:false,i:0,list:null},o);if(o.si!==undefined){cur=o.si}render();window.scrollTo(0,0)}
 function startPractice(n,src){const base=listFor(src);const L=base.filter(x=>!S.att[x.id]);const pool=(L.length?L:base).slice().sort(()=>Math.random()-.5).slice(0,n);
   V.list=pool;V.m='prac';V.focus=true;V.i=0;render();window.scrollTo(0,0)}
-function render(){setTimeout(fsSync,0);
+function render(){setTimeout(fsSync,0);document.body.classList.toggle('zq',!!V.focus);
   header();sidebar();ddRender();
   if(V.m==='dash')return dash();
   if(V.m==='pri')return priPage();
@@ -405,8 +409,8 @@ function render(){setTimeout(fsSync,0);
   if(t)h+=`<details class="theory" ${V.focus?'':'open'}><summary>Must-know theory</summary>${theoryHtml(t.theory)}</details>`+(t.deep?`<details class="theory deep"><summary>📚 Deep revision notes — concepts beyond the PYQs</summary>${theoryHtml(t.deep)}</details>`:'');
   if(!L.length)h+=`<div class="empty">Nothing here yet.</div>`;
   else if(V.focus){V.i=Math.min(V.i,L.length-1);const x=L[V.i];
-    h+=`<div class="bar" style="margin-bottom:10px"><i style="width:${Math.round((V.i+1)/L.length*100)}%"></i></div><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div class="sub">Question ${V.i+1} of ${L.length} · keys: A–D answer, ← → move</div><div class="row"><button ${V.i?'':'disabled'} onclick="V.i--;render();window.scrollTo(0,0)">← Prev</button><button class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div></div>`+qhtml(x)+
-    `<div class="row"><button ${V.i?'':'disabled'} onclick="V.i--;render()">← Prev</button><button id="nextBtn" class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div>`}
+    h+=`<div class="bar" style="margin-bottom:10px"><i style="width:${Math.round((V.i+1)/L.length*100)}%"></i></div><div class="row zk" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div class="sub">Question ${V.i+1} of ${L.length} · keys: A–D answer, ← → move</div><div class="row"><button ${V.i?'':'disabled'} onclick="V.i--;render();window.scrollTo(0,0)">← Prev</button><button class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div></div>`+qhtml(x)+
+    `<div class="row zk"><button ${V.i?'':'disabled'} onclick="V.i--;render()">← Prev</button><button id="nextBtn" class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div>`}
   else{const sec=(cls,label,arr)=>{if(!arr.length)return '';const d=arr.filter(x=>S.att[x.id]).length;return `<div class="sec ${cls}">${label}<small>${d}/${arr.length} done</small><div class="bar"><i style="width:${arr.length?d/arr.length*100:0}%"></i></div></div>`+arr.map(qhtml).join('')};
     const A=L.filter(x=>!isP(x.q)),B=L.filter(x=>isP(x.q));
     h+=sec('pyq','📄 Past-paper questions (PYQ)',A)+sec('prac','✍️ Practice questions',B);}
