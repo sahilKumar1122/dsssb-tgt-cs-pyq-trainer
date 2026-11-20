@@ -369,16 +369,19 @@ function fsToggle(){if(document.fullscreenElement)document.exitFullscreen?.();el
 function fsStart(){const n=Math.max(1,+$('#fsN').value||100),m=Math.max(1,+$('#fsM').value||120),base=listFor(),pick=a=>a.slice().sort(()=>Math.random()-.5);
   const pool=pick(base.filter(x=>!S.att[x.id])).concat(pick(base.filter(x=>S.att[x.id]))).slice(0,n);if(!pool.length)return;
   FS={start:Date.now(),end:Date.now()+m*60000,ids:pool.map(x=>x.id)};try{localStorage.setItem('kgpyq_fs',JSON.stringify(FS))}catch(e){}
-  V.list=pool;V.m='prac';V.focus=true;V.i=0;fsRun();if($('#fsFull')?.checked&&!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});render();window.scrollTo(0,0)}
+  V.list=pool;V.m='prac';V.focus=true;V.i=0;V.zi=0;fsRun();if($('#fsFull')?.checked&&!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});render();window.scrollTo(0,0)}
 function fsRun(){document.body.classList.add('fs');clearInterval(fsT);fsT=setInterval(fsTick,1000);fsTick()}
 function fsTick(){if(!FS)return;const r=FS.end-Date.now();if(r<=0)return fsEnd();
   $('#fsbar').innerHTML=`⏱ <b class="${r<300000?'low':''}">${fsFmt(r)}</b><span>✔ ${fsDone()}/${FS.ids.length} answered</span><button onclick="if(confirm('End session now?'))fsEnd()">End</button>`}
 function fsEnd(){clearInterval(fsT);const ids=FS.ids.filter(id=>S.att[id]&&S.att[id].t>=FS.start),ok=ids.filter(id=>S.att[id].ok).length,used=Math.min(Date.now(),FS.end)-FS.start,n=FS.ids.length;
   FS=null;try{localStorage.removeItem('kgpyq_fs')}catch(e){}document.body.classList.remove('fs');
   const d=document.createElement('div');d.id='fsres';d.innerHTML=`<div><h2>Session done 🎯</h2><p><b>${ids.length}/${n}</b> answered · <b>${ids.length?Math.round(ok/ids.length*100):0}%</b> correct<br>Time: <b>${fsFmt(used)}</b>${ids.length?` · ${Math.round(used/60000/ids.length*10)/10} min/question`:''}</p><button class="pri" onclick="this.closest('#fsres').remove()">Close</button></div>`;document.body.appendChild(d);render()}
+function viewL(){const L=listFor().slice().sort((a,b)=>(isP(a.q)?1:0)-(isP(b.q)?1:0));if(!V.focus)return L;
+  if(!V.zi){V.zi=1;V.ord=L.filter(x=>!S.att[x.id]).concat(L.filter(x=>S.att[x.id])).map(x=>x.id)}
+  const m=new Map(L.map(x=>[x.id,x])),o=V.ord.filter(id=>m.has(id)).map(id=>m.get(id)),seen=new Set(V.ord);return o.concat(L.filter(x=>!seen.has(x.id)))}
 function go(o){V=Object.assign({m:'dash',t:-1,focus:false,i:0,list:null},o);if(o.si!==undefined){cur=o.si}render();window.scrollTo(0,0)}
 function startPractice(n,src){const base=listFor(src);const L=base.filter(x=>!S.att[x.id]);const pool=(L.length?L:base).slice().sort(()=>Math.random()-.5).slice(0,n);
-  V.list=pool;V.m='prac';V.focus=true;V.i=0;render();window.scrollTo(0,0)}
+  V.list=pool;V.m='prac';V.focus=true;V.i=0;V.zi=0;render();window.scrollTo(0,0)}
 function render(){setTimeout(fsSync,0);document.body.classList.toggle('zq',!!V.focus);
   header();sidebar();ddRender();
   if(V.m==='dash')return dash();
@@ -386,7 +389,7 @@ function render(){setTimeout(fsSync,0);document.body.classList.toggle('zq',!!V.f
   if(V.m==='all')return allPage();
   if(V.m==='syl')return sylPage();
   const cAll=listFor('all').length,cP=listFor('pyq').length,cR=listFor('prac').length;
-  const L0=listFor();const L=L0.slice().sort((a,b)=>(isP(a.q)?1:0)-(isP(b.q)?1:0));const t=V.m==='topic'&&V.t>=0?SUBJ[cur].topics[V.t]:null;
+  const L=viewL();const t=V.m==='topic'&&V.t>=0?SUBJ[cur].topics[V.t]:null;
   const title={topic:t?t.title:SUBJ[cur].subject+' — all topics',bm:'⭐ Bookmarked',rv:'✔ Revised',unrv:'📖 Not revised yet in '+SUBJ[cur].subject,miss:'❌ My mistakes',new:'🆕 Unattempted in '+SUBJ[cur].subject,prac:'🎲 Practice set'}[V.m];
   const done=L.filter(x=>S.att[x.id]).length,ok=L.filter(x=>S.att[x.id]?.ok).length;
   let h=`<h2>${esc(title)}</h2><p class="sub">${L.length} questions · ${done} attempted${done?` · ${Math.round(ok/done*100)}% correct`:''}</p>
@@ -408,7 +411,7 @@ function render(){setTimeout(fsSync,0);document.body.classList.toggle('zq',!!V.f
   </div>`;
   if(t)h+=`<details class="theory" ${V.focus?'':'open'}><summary>Must-know theory</summary>${theoryHtml(t.theory)}</details>`+(t.deep?`<details class="theory deep"><summary>📚 Deep revision notes — concepts beyond the PYQs</summary>${theoryHtml(t.deep)}</details>`:'');
   if(!L.length)h+=`<div class="empty">Nothing here yet.</div>`;
-  else if(V.focus){if(!V.zi){V.zi=1;if(!V.i){const k=L.findIndex(x=>!S.att[x.id]);V.i=k<0?0:k}}V.i=Math.min(V.i,L.length-1);const x=L[V.i];
+  else if(V.focus){V.i=Math.min(V.i,L.length-1);const x=L[V.i];
     h+=`<div class="bar" style="margin-bottom:10px"><i style="width:${Math.round((V.i+1)/L.length*100)}%"></i></div><div class="row zk" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div class="sub">Question ${V.i+1} of ${L.length} · keys: A–D answer, ← → move</div><div class="row"><button ${V.i?'':'disabled'} onclick="V.i--;render();window.scrollTo(0,0)">← Prev</button><button class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div></div>`+qhtml(x)+
     `<div class="row zk"><button ${V.i?'':'disabled'} onclick="V.i--;render()">← Prev</button><button id="nextBtn" class="pri" ${V.i<L.length-1?'':'disabled'} onclick="V.i++;render();window.scrollTo(0,0)">Next →</button></div>`}
   else{const sec=(cls,label,arr)=>{if(!arr.length)return '';const d=arr.filter(x=>S.att[x.id]).length;return `<div class="sec ${cls}">${label}<small>${d}/${arr.length} done</small><div class="bar"><i style="width:${arr.length?d/arr.length*100:0}%"></i></div></div>`+arr.map(qhtml).join('')};
@@ -455,7 +458,7 @@ function importP(f){const r=new FileReader();r.onload=()=>{try{S=Object.assign(S
 
 document.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)||!V.focus)return;
-  const L=listFor();
+  const L=viewL();
   if(e.key==='ArrowRight'&&V.i<L.length-1){V.i++;render()}
   else if(e.key==='ArrowLeft'&&V.i>0){V.i--;render()}
   else{const k=e.key.toUpperCase();if(k.length===1&&'ABCD'.includes(k)){const x=L[V.i];if(x&&x.q.opts[k])pick(x.id,k)}}
