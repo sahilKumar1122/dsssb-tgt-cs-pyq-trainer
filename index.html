@@ -105,6 +105,7 @@ h2{margin:0 0 4px;font-size:22px}
 #fsbar{display:none;position:fixed;top:0;left:0;right:0;z-index:60;background:#1c2030;color:#fff;align-items:center;justify-content:center;gap:18px;padding:8px 14px;font-size:14px}#fsbar b{font-variant-numeric:tabular-nums;font-size:18px}#fsbar b.low{color:#fca5a5}#fsbar button{background:#374151;color:#fff;border:0;border-radius:8px;padding:4px 12px}
 body.fs #fsbar{display:flex}body.fs header,body.fs aside{display:none}body.fs .app{display:block}body.fs main{padding-top:56px;max-width:900px;margin:0 auto}
 body.zen.zq header,body.zen.zq aside{display:none}body.zen.zq .app{display:block}body.zen.zq main{max-width:860px;margin:0 auto;padding-top:20px}body.zen.fs.zq main{padding-top:64px}body.zen.zq #view>:not(.bar):not(.zk):not(.q){display:none}
+#qg{display:none;position:fixed;right:14px;top:64px;bottom:60px;width:236px;z-index:40;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;overflow:auto}body.qg #qg{display:block}#qg h4{margin:0 0 8px;font-size:13px;color:var(--mute);font-weight:600}#qg .g{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}#qg button{padding:6px 0;border:1px solid #e5e7eb;background:#eceef3;color:#4b5563;border-radius:8px;font:inherit;font-size:12px;cursor:pointer}#qg button.rv{background:#16a34a;border-color:#16a34a;color:#fff}#qg button.cur{outline:2px solid var(--acc);outline-offset:1px;font-weight:700}@media(min-width:1100px){body.qg main{padding-right:270px}body.qg.zen.zq main{max-width:none;margin:0 270px 0 auto;width:min(860px,calc(100% - 290px))}}@media(max-width:1099px){body.qg #qg{display:none}}
 #zbtn{display:none;position:fixed;right:14px;bottom:14px;z-index:65;background:#1c2030;color:#fff;border:0;border-radius:999px;padding:8px 14px;opacity:.75;cursor:pointer}#zbtn:hover{opacity:1}body.zen.zq #zbtn{display:block}
 #fsres{position:fixed;inset:0;background:rgba(15,20,35,.55);z-index:70;display:flex;align-items:center;justify-content:center}#fsres>div{background:#fff;border-radius:16px;padding:24px 28px;max-width:380px;text-align:center}#fsres h2{margin-top:0}
 .rvb{font-size:12px;padding:2px 9px;margin-right:6px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--mute)}.rvb.on{background:var(--okbg);border-color:var(--ok);color:var(--ok);font-weight:600}.q.rvd{background:#f7fcf9}.q.pyq.rvd,.q.prac.rvd{border-left-color:var(--ok)}
@@ -157,7 +158,7 @@ body.zen.zq header,body.zen.zq aside{display:none}body.zen.zq .app{display:block
   <div class="nav" id="smart"></div>
   <div id="topics"></div>
 </aside>
-<main id="view"></main><div id="fsbar"></div><button id="zbtn" onclick="zToggle()">☰ Show panels</button>
+<main id="view"></main><div id="fsbar"></div><div id="qg"></div><button id="zbtn" onclick="zToggle()">☰ Show panels</button>
 </div>
 <div class="toast" id="toast"></div>
 <script>
@@ -376,13 +377,15 @@ function fsTick(){if(!FS)return;const r=FS.end-Date.now();if(r<=0)return fsEnd()
 function fsEnd(){clearInterval(fsT);const ids=FS.ids.filter(id=>S.att[id]&&S.att[id].t>=FS.start),ok=ids.filter(id=>S.att[id].ok).length,used=Math.min(Date.now(),FS.end)-FS.start,n=FS.ids.length;
   FS=null;try{localStorage.removeItem('kgpyq_fs')}catch(e){}document.body.classList.remove('fs');
   const d=document.createElement('div');d.id='fsres';d.innerHTML=`<div><h2>Session done 🎯</h2><p><b>${ids.length}/${n}</b> answered · <b>${ids.length?Math.round(ok/ids.length*100):0}%</b> correct<br>Time: <b>${fsFmt(used)}</b>${ids.length?` · ${Math.round(used/60000/ids.length*10)/10} min/question`:''}</p><button class="pri" onclick="this.closest('#fsres').remove()">Close</button></div>`;document.body.appendChild(d);render()}
+function qGrid(){const e=$('#qg'),on=!!(V.focus&&$('#view .q'));document.body.classList.toggle('qg',on);if(!on)return;const L=viewL();
+  e.innerHTML=`<h4>Questions · <span style="color:#16a34a">■</span> revised</h4><div class="g">${L.map((x,i)=>`<button class="${S.rv[x.id]?'rv':''} ${i===V.i?'cur':''}" onclick="V.i=${i};render();window.scrollTo(0,0)">${i+1}</button>`).join('')}</div>`;e.querySelector('.cur')?.scrollIntoView({block:'nearest'})}
 function viewL(){const L=listFor().slice().sort((a,b)=>(isP(a.q)?1:0)-(isP(b.q)?1:0));if(!V.focus)return L;
-  if(!V.zi){V.zi=1;V.ord=L.filter(x=>!S.att[x.id]).concat(L.filter(x=>S.att[x.id])).map(x=>x.id)}
+  if(!V.zi){V.zi=1;const dn=x=>S.att[x.id]||S.rv[x.id];V.ord=L.filter(x=>!dn(x)).concat(L.filter(dn)).map(x=>x.id)}
   const m=new Map(L.map(x=>[x.id,x])),o=V.ord.filter(id=>m.has(id)).map(id=>m.get(id)),seen=new Set(V.ord);return o.concat(L.filter(x=>!seen.has(x.id)))}
 function go(o){V=Object.assign({m:'dash',t:-1,focus:false,i:0,list:null},o);if(o.si!==undefined){cur=o.si}render();window.scrollTo(0,0)}
 function startPractice(n,src){const base=listFor(src);const L=base.filter(x=>!S.att[x.id]);const pool=(L.length?L:base).slice().sort(()=>Math.random()-.5).slice(0,n);
   V.list=pool;V.m='prac';V.focus=true;V.i=0;V.zi=0;render();window.scrollTo(0,0)}
-function render(){setTimeout(fsSync,0);document.body.classList.toggle('zq',!!V.focus);
+function render(){setTimeout(fsSync,0);setTimeout(qGrid,0);document.body.classList.toggle('zq',!!V.focus);
   header();sidebar();ddRender();
   if(V.m==='dash')return dash();
   if(V.m==='pri')return priPage();
