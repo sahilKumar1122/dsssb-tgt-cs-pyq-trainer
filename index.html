@@ -270,7 +270,7 @@ function allPage(){
       <div class="nx">${nxt?`▶ <b>Next:</b> ${esc(nxt.t.title)} <span style="color:var(--mute)">(${nxt.d}/${nxt.t.qs.length})</span>`:'✅ Subject complete'}</div></div>`}).join('');
   const maps=SUBJ.map((sj,i)=>`<div class="tmap"><h4><span>${icon(sj.subject)} ${esc(sj.subject)}</span></h4><div class="chips">${sj.topics.map((t,ti)=>{const d=t.qs.filter(q=>S.att[sid(i,q.n)]).length,p=t.qs.length?Math.round(d/t.qs.length*100):0;const pb=PT[sj.slug+'|'+t.title];
     return `<span class="chp" style="--p:${p}%" title="${esc(t.title)} — ${d}/${t.qs.length}" onclick="go({m:'topic',t:${ti},si:${i}})">${pb?TB[pb.tier][0]+' ':''}${esc(t.title.replace(/^\d+\.\s*/,'').slice(0,34))} · ${p}%</span>`}).join('')}</div></div>`).join('');
-  $('#view').innerHTML=`<h2>🗂 All subjects</h2><p class="sub">Every subject and topic at a glance. Click a card to open it, or any topic chip to jump straight in.</p>
+  $('#view').innerHTML=`<h2>🗂 All subjects</h2><p class="sub">Every subject and topic at a glance. Click a card to open it, or any topic chip to jump straight in.</p><div class="row noprint" style="margin-bottom:12px"><button class="pri" onclick="startLeft(20,true)">🎲 20 random PYQ left (all subjects)</button><span class="sub">only questions you haven't answered or revised</span></div>
   ${(()=>{const all=SUBJ.flatMap((_,i)=>allQ(i)),rvN=all.filter(x=>S.rv[x.id]).length,bothN=all.filter(x=>S.att[x.id]&&S.rv[x.id]).length,n=all.length,pc=v=>n?(v/n*100).toFixed(1):0;
    const c=(t,v,col,sub)=>`<div class="card"><h3>${t}</h3><div class="big">${v}<span style="font-size:15px;font-weight:500;color:var(--mute)"> / ${n}</span></div><div class="bar"><i style="width:${pc(v)}%;background:${col}"></i></div><div class="sub">${pc(v)}% ${sub}</div></div>`;
    return `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));margin-bottom:12px">${c('✅ Done (answered)',tD,'var(--acc)','of all questions')}${c('✔ Revised',rvN,'var(--ok)','of all questions')}${c('⏳ Left to do',n-tD,'#f59e0b',`· ${n-rvN} still to revise`)}</div>
@@ -397,7 +397,7 @@ function render(){setTimeout(fsSync,0);setTimeout(qGrid,0);document.body.classLi
   const done=L.filter(x=>S.att[x.id]).length,ok=L.filter(x=>S.att[x.id]?.ok).length;
   let h=`<h2>${esc(title)}</h2><p class="sub">${L.length} questions · ${done} attempted${done?` · ${Math.round(ok/done*100)}% correct`:''}</p>
   <div class="row noprint" style="margin-bottom:14px">
-    <button class="pri" onclick="startPractice(10)">▶ 10 random</button><button onclick="startPractice(10,'pyq')">📄 10 random PYQ</button><button style="border-color:#0d9488;color:#0f766e" onclick="startPractice(10,'prac')">✍️ 10 random practice</button>
+    <button class="pri" onclick="startPractice(10)">▶ 10 random</button><button style="border-color:#d97706;color:#b45309" onclick="startLeft(20)" title="PYQs you haven't answered or revised, in this view">🎲 20 PYQ left</button><button onclick="startPractice(10,'pyq')">📄 10 random PYQ</button><button style="border-color:#0d9488;color:#0f766e" onclick="startPractice(10,'prac')">✍️ 10 random practice</button>
     <button onclick="V.focus=!V.focus;V.i=0;V.zi=0;render()">${V.focus?'📃 Show full list':'🔍 One at a time'}</button>
     <button onclick="window.print()">🖨 Print / PDF</button>
   </div>
@@ -455,6 +455,9 @@ function dash(){
 function setSrc(k){SRC=k;try{localStorage.setItem('kgpyq_src',k)}catch(e){}render()}
 function setRev(v){REV=v;try{localStorage.setItem('kgpyq_rev',v?'1':'0')}catch(e){}render()}
 function setBrief(v){BRIEF=v;try{localStorage.setItem('kgpyq_brief',v?'1':'0')}catch(e){}render()}
+function startLeft(n,all){const base=(all?SUBJ.flatMap((_,i)=>allQ(i)):listFor('pyq')).filter(x=>!isP(x.q)&&!S.att[x.id]&&!S.rv[x.id]);
+  if(!base.length)return toast('No unsolved & unrevised PYQs left here');
+  V=Object.assign({},V,{m:'prac',list:base.slice().sort(()=>Math.random()-.5).slice(0,n),focus:true,i:0,zi:0,t:all?-1:V.t});render();window.scrollTo(0,0)}
 function startPractice10(){V.m='new';startPractice(10)}
 function exportP(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='pyq-progress.json';a.click()}
 function importP(f){const r=new FileReader();r.onload=()=>{try{S=Object.assign(S,JSON.parse(r.result));save();render();toast('Progress imported')}catch(e){toast('Invalid file')}};r.readAsText(f)}
